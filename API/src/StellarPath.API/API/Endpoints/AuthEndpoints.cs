@@ -37,8 +37,6 @@ namespace API.Endpoints
             if (!userExists)
             {
 
-                Console.WriteLine(payload.FamilyName);
-
                 await userService.CreateUserAsync(
                     payload.Subject,
                     payload.Email,
