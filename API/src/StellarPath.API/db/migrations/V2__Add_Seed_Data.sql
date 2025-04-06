@@ -11,7 +11,6 @@ INSERT INTO cruise_statuses (status_name) VALUES
 INSERT INTO booking_statuses (status_name) VALUES
 ('Reserved'),
 ('Paid'),
-('Checked In'),
 ('Completed'),
 ('Cancelled'),
 ('Expired');
