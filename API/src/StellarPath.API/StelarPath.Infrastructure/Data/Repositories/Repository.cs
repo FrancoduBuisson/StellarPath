@@ -22,7 +22,7 @@ public abstract class Repository<T> : IRepository<T> where T : class
 
     public virtual async Task<bool> DeleteAsync(int id)
     {
-        var query = $"DELETE FROM {TableName} WHERE {IdColumn} = @{id}";
+        var query = $"DELETE FROM {TableName} WHERE {IdColumn} = @Id";
         return await UnitOfWork.Connection.ExecuteAsync(query, new { Id = id }) > 0;
     }
 
