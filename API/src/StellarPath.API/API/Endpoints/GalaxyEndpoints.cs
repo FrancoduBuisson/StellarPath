@@ -21,26 +21,26 @@ public static class GalaxyEndpoints
             .Produces(StatusCodes.Status500InternalServerError);
 
         galaxyGroup.MapPost("/", CreateGalaxy)
-            .WithName("CreateGalaxy")
-            .RequireAuthorization("Admin")
+            .WithName("CreateGalaxy")            
             .Produces<int>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status500InternalServerError);
+            //.RequireAuthorization("Admin")
 
         galaxyGroup.MapPut("/{id}", UpdateGalaxy)
             .WithName("UpdateGalaxy")
-            .RequireAuthorization("Admin")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError);
+             //.RequireAuthorization("Admin")
 
         galaxyGroup.MapPatch("/{id}/deactivate", DeactivateGalaxy)
             .WithName("DeactivateGalaxy")
-            .RequireAuthorization("Admin")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError);
+             //.RequireAuthorization("Admin")
 
         return app;
     }

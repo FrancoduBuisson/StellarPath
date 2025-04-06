@@ -62,9 +62,21 @@ public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitO
         return galaxy != null ? MapToDto(galaxy) : null;
     }
 
-    public Task<bool> UpdateGalaxyAsync(GalaxyDto galaxyDto)
+    public async Task<bool> UpdateGalaxyAsync(GalaxyDto galaxyDto)
     {
-        throw new NotImplementedException();
+        try
+        {
+            unitOfWork.BeginTransaction();
+            var galaxy = MapToEntity(galaxyDto);
+            var result = await galaxyRepository.UpdateAsync(galaxy);
+            unitOfWork.Commit();
+            return result;
+        }
+        catch
+        {
+            unitOfWork.Rollback();
+            throw;
+        }
     }
 
     private static GalaxyDto MapToDto(Galaxy galaxy)

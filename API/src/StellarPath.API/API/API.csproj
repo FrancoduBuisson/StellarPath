@@ -12,10 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Middleware\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\StelarPath.Infrastructure\StelarPath.API.Infrastructure.csproj" />
     <ProjectReference Include="..\StellarPath.API.Core\StellarPath.API.Core.csproj" />
   </ItemGroup>

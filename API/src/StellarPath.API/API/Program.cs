@@ -1,7 +1,23 @@
 using API.Configuration;
+using API.Endpoints;
+using API.Middleware;
 using Microsoft.OpenApi.Models;
 
+
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -20,7 +36,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 
+app.RegisterGalaxyEndpoints();
 
 app.Run();
