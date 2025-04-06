@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using StelarPath.API.Infrastructure.Data;
 using StelarPath.API.Infrastructure.Data.Repositories;
@@ -52,14 +53,9 @@ public static class DependencyInjection
                     var jwtService = context.HttpContext.RequestServices.GetRequiredService<IJwtService>();
                     var googleAuthService = context.HttpContext.RequestServices.GetRequiredService<IGoogleAuthService>();
 
-                    var token = context.SecurityToken as JwtSecurityToken;
-                    if (token == null)
-                    {
-                        context.Fail("Invalid token");
-                        return;
-                    }
+                    var googleToken = context.Principal?.Claims
+                        .FirstOrDefault(c => c.Type == "google_token")?.Value;
 
-                    var googleToken = token.Claims.FirstOrDefault(c => c.Type == "google_token")?.Value;
                     if (string.IsNullOrEmpty(googleToken))
                     {
                         context.Fail("Missing Google token");
