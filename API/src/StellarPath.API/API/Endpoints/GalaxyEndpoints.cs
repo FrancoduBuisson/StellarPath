@@ -21,26 +21,29 @@ public static class GalaxyEndpoints
             .Produces(StatusCodes.Status500InternalServerError);
 
         galaxyGroup.MapPost("/", CreateGalaxy)
-            .WithName("CreateGalaxy")            
+            .WithName("CreateGalaxy")
             .Produces<int>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status500InternalServerError);
-            //.RequireAuthorization("Admin")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
 
         galaxyGroup.MapPut("/{id}", UpdateGalaxy)
             .WithName("UpdateGalaxy")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status500InternalServerError);
-             //.RequireAuthorization("Admin")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
 
         galaxyGroup.MapPatch("/{id}/deactivate", DeactivateGalaxy)
             .WithName("DeactivateGalaxy")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status500InternalServerError);
-             //.RequireAuthorization("Admin")
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin"); 
 
         return app;
     }
