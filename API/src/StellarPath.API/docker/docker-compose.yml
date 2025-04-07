@@ -37,6 +37,11 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=stellarpath;Username=postgres;Password=admin;
       - ASPNETCORE_ENVIRONMENT=Development
+      - GoogleAuth__ClientId=68494680770-mckvg61ners8dlhbqcl7vmhe137lrq0e.apps.googleusercontent.com
+      - Jwt__SecretKey=0171d3396b78e11e89c03aa2d2de9f8f110327ccaf09fb5d88e20272c0716752
+      - Jwt__ExpiryHours=1
+      - Jwt__Issuer=StellarPathAPI
+      - Jwt__Audience=StellarPathUsers
     networks:
       - space-travel-network
 
