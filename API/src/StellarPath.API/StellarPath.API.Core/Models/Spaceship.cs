@@ -4,6 +4,6 @@
     {
         public int SpaceshipId { get; set; }
         public int ModelId { get; set; }
-        public required bool IsActive { get; set; }
+        public bool IsActive { get; set; }
     }
 }
