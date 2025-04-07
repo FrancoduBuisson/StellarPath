@@ -1,0 +1,56 @@
+name: Flyway Migrate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'API/src/StellarPath.API/db/migrations/**'
+
+jobs:
+  migrate:
+    name: Run Flyway Migrations
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+          aws-region: af-south-1
+
+      - name: Get Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create "stellarpath" database if it doesn't exist
+        run: |
+          if ! psql -h "${{ steps.tf-outputs.outputs.db_endpoint }}" -p "${{ steps.tf-outputs.outputs.db_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='stellarpath'" | grep -q 1; then
+            psql -h "${{ steps.tf-outputs.outputs.db_endpoint }}" -p "${{ steps.tf-outputs.outputs.db_port }}" -U "${{ secrets.DATABASE_USERNAME }}" -d postgres -c "CREATE DATABASE stellarpath;"
+          fi
+        env:
+          PGPASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+
+      - name: Run Flyway validate and migrate
+        uses: joshuaavalon/flyway-action@v3.0.0
+        with:
+          url: jdbc:postgresql://${{ steps.tf-outputs.outputs.db_endpoint }}/stellarpath
+          user: ${{ secrets.DATABASE_USERNAME }}
+          password: ${{ secrets.DATABASE_PASSWORD }}
+          command: migrate
+          locations: filesystem:./migrations
+        env:
+          FLYWAY_VALIDATE_MIGRATION_NAMING: true
+          working-directory: API/src/StellarPath.API/db
