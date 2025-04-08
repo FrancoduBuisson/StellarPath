@@ -51,6 +51,59 @@ public class DestinationService(IDestinationRepository destinationRepository, IS
         }
     }
 
+    public async Task<bool> ActivateDestinationAsync(int id)
+    {
+        try
+        {
+            var destination = await destinationRepository.GetByIdAsync(id);
+            if (destination == null)
+            {
+                return false;
+            }
+
+            unitOfWork.BeginTransaction();
+
+            destination.IsActive = true;
+            var result = await destinationRepository.UpdateAsync(destination);
+
+            unitOfWork.Commit();
+
+            return result;
+        }
+        catch
+        {
+            unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<DestinationDto>> SearchDestinationsAsync(
+    string? name, int? systemId, string? systemName,
+    long? minDistance, long? maxDistance, bool? isActive)
+    {
+        if (!string.IsNullOrEmpty(systemName) && !systemId.HasValue)
+        {
+            var systems = await starSystemRepository.SearchStarSystemsAsync(name=systemName,null,null);
+            var system = systems.FirstOrDefault();
+            if (system != null)
+            {
+                systemId = system.SystemId;
+            }
+        }
+
+        var destinations = await destinationRepository.SearchDestinationsAsync(
+            name, systemId, minDistance, maxDistance, isActive);
+
+        var destinationDtos = new List<DestinationDto>();
+        foreach (var destination in destinations)
+        {
+            var dto = await MapToDtoWithSystemNameAsync(destination);
+            destinationDtos.Add(dto);
+        }
+
+        return destinationDtos;
+    }
+
     public async Task<IEnumerable<DestinationDto>> GetAllDestinationsAsync()
     {
         var destinations = await destinationRepository.GetAllAsync();

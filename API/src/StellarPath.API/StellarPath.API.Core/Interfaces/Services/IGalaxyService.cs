@@ -9,5 +9,7 @@ public interface IGalaxyService
     Task<int> CreateGalaxyAsync(GalaxyDto galaxyDto);
     Task<bool> UpdateGalaxyAsync(GalaxyDto galaxyDto);
     Task<bool> DeactivateGalaxyAsync(int id);
+    Task<bool> ActivateGalaxyAsync(int id);
+    Task<IEnumerable<GalaxyDto>> SearchGalaxiesAsync(string? name, bool? isActive);
 }
 

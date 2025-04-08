@@ -72,5 +72,6 @@ app.RegisterGalaxyEndpoints();
 app.RegisterAuthEndpoints();
 app.RegisterStarSystemEndpoints();
 app.RegisterDestinationEndpoints();
+app.RegisterUserEndpoints();
 
 app.Run();

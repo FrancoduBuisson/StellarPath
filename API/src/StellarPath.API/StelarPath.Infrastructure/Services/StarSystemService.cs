@@ -50,6 +50,32 @@ public class StarSystemService(IStarSystemRepository starSystemRepository, IGala
         }
     }
 
+    public async Task<bool> ActivateStarSystemAsync(int id)
+    {
+        try
+        {
+            var starSystem = await starSystemRepository.GetByIdAsync(id);
+            if (starSystem == null)
+            {
+                return false;
+            }
+
+            unitOfWork.BeginTransaction();
+
+            starSystem.IsActive = true;
+            var result = await starSystemRepository.UpdateAsync(starSystem);
+
+            unitOfWork.Commit();
+
+            return result;
+        }
+        catch
+        {
+            unitOfWork.Rollback();
+            throw;
+        }
+    }
+
     public async Task<IEnumerable<StarSystemDto>> GetAllStarSystemsAsync()
     {
         var starSystems = await starSystemRepository.GetAllAsync();
@@ -113,6 +139,32 @@ public class StarSystemService(IStarSystemRepository starSystemRepository, IGala
         }
 
         return systemDtos;
+    }
+
+    public async Task<IEnumerable<StarSystemDto>> SearchStarSystemsAsync(
+    string? name, int? galaxyId, string? galaxyName, bool? isActive)
+    {
+        if (!string.IsNullOrEmpty(galaxyName) && !galaxyId.HasValue)
+        {
+            var galaxies = await galaxyRepository.SearchGalaxiesAsync(name:galaxyName,null);
+            var galaxy = galaxies.FirstOrDefault();
+            if (galaxy != null)
+            {
+                galaxyId = galaxy.GalaxyId;
+            }
+        }
+
+        var starSystems = await starSystemRepository.SearchStarSystemsAsync(
+            name, galaxyId, isActive);
+
+        var starSystemDtos = new List<StarSystemDto>();
+        foreach (var starSystem in starSystems)
+        {
+            var dto = await MapToDtoWithGalaxyNameAsync(starSystem);
+            starSystemDtos.Add(dto);
+        }
+
+        return starSystemDtos;
     }
 
     private async Task<StarSystemDto> MapToDtoWithGalaxyNameAsync(StarSystem starSystem)

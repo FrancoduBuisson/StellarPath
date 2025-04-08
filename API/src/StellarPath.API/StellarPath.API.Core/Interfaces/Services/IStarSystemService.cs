@@ -10,4 +10,7 @@ public interface IStarSystemService
     Task<int> CreateStarSystemAsync(StarSystemDto starSystemDto);
     Task<bool> UpdateStarSystemAsync(StarSystemDto starSystemDto);
     Task<bool> DeactivateStarSystemAsync(int id);
+    Task<bool> ActivateStarSystemAsync(int id);
+    Task<IEnumerable<StarSystemDto>> SearchStarSystemsAsync(
+    string? name, int? galaxyId, string? galaxyName, bool? isActive);
 }

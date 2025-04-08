@@ -1,4 +1,5 @@
-﻿using StellarPath.API.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 
 namespace API.Endpoints;
@@ -56,14 +57,18 @@ public static class StarSystemEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization("Admin");
 
+        starSystemGroup.MapPatch("/{id}/activate", ActivateStarSystem)
+            .WithName("ActivateStarSystem")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
+
+
         return app;
     }
 
-    private static async Task<IResult> GetAllStarSystems(IStarSystemService starSystemService)
-    {
-        var starSystems = await starSystemService.GetAllStarSystemsAsync();
-        return Results.Ok(starSystems);
-    }
 
     private static async Task<IResult> GetActiveStarSystems(IStarSystemService starSystemService)
     {
@@ -139,5 +144,36 @@ public static class StarSystemEndpoints
 
         await starSystemService.DeactivateStarSystemAsync(id);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> ActivateStarSystem(int id, IStarSystemService starSystemService)
+    {
+        var starSystem = await starSystemService.GetStarSystemByIdAsync(id);
+        if (starSystem == null)
+        {
+            return Results.NotFound();
+        }
+
+        await starSystemService.ActivateStarSystemAsync(id);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetAllStarSystems(
+    [FromQuery] string? name,
+    [FromQuery] int? galaxyId,
+    [FromQuery] string? galaxyName,
+    [FromQuery] bool? isActive,
+    IStarSystemService starSystemService)
+    {
+        if (!string.IsNullOrEmpty(name) || galaxyId.HasValue ||
+            !string.IsNullOrEmpty(galaxyName) || isActive.HasValue)
+        {
+            var starSystems = await starSystemService.SearchStarSystemsAsync(
+                name, galaxyId, galaxyName, isActive);
+            return Results.Ok(starSystems);
+        }
+
+        var allStarSystems = await starSystemService.GetAllStarSystemsAsync();
+        return Results.Ok(allStarSystems);
     }
 }

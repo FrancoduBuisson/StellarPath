@@ -42,4 +42,51 @@ public class DestinationRepository(IUnitOfWork unitOfWork) : Repository<Destinat
         var result = await UnitOfWork.Connection.ExecuteAsync(query, entity);
         return result > 0;
     }
+
+    public async Task<IEnumerable<Destination>> SearchDestinationsAsync(
+    string? name, int? systemId, long? minDistance,
+    long? maxDistance, bool? isActive)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            conditions.Add("name ILIKE @Name");
+            parameters.Add("Name", $"%{name}%");
+        }
+
+        if (systemId.HasValue)
+        {
+            conditions.Add("system_id = @SystemId");
+            parameters.Add("SystemId", systemId.Value);
+        }
+
+        if (minDistance.HasValue)
+        {
+            conditions.Add("distance_from_earth >= @MinDistance");
+            parameters.Add("MinDistance", minDistance.Value);
+        }
+
+        if (maxDistance.HasValue)
+        {
+            conditions.Add("distance_from_earth <= @MaxDistance");
+            parameters.Add("MaxDistance", maxDistance.Value);
+        }
+
+        if (isActive.HasValue)
+        {
+            conditions.Add("is_active = @IsActive");
+            parameters.Add("IsActive", isActive.Value);
+        }
+
+        var query = $"SELECT * FROM {TableName}";
+
+        if (conditions.Count > 0)
+        {
+            query += " WHERE " + string.Join(" AND ", conditions);
+        }
+
+        return await UnitOfWork.Connection.QueryAsync<Destination>(query, parameters);
+    }
 }
