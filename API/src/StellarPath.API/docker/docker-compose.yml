@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: space-travel-booking-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: stellarpath
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - space-travel-network
+  
+  flyway:
+    image: flyway/flyway:9
+    container_name: space-travel-flyway
+    depends_on:
+      - postgres
+    command: -url=jdbc:postgresql://postgres:5432/stellarpath -user=postgres -password=admin -connectRetries=60 migrate
+    volumes:
+      - ../db/migrations:/flyway/sql
+    networks:
+      - space-travel-network
+  
+  api:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    container_name: space-travel-api
+    depends_on:
+      - postgres
+      - flyway
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=stellarpath;Username=postgres;Password=admin;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - GoogleAuth__ClientId=68494680770-mckvg61ners8dlhbqcl7vmhe137lrq0e.apps.googleusercontent.com
+      - Jwt__SecretKey=0171d3396b78e11e89c03aa2d2de9f8f110327ccaf09fb5d88e20272c0716752
+      - Jwt__ExpiryHours=1
+      - Jwt__Issuer=StellarPathAPI
+      - Jwt__Audience=StellarPathUsers
+    networks:
+      - space-travel-network
+
+networks:
+  space-travel-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
