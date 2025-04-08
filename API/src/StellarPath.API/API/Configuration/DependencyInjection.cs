@@ -87,12 +87,16 @@ public static class DependencyInjection
     {
         services.AddScoped<IGalaxyRepository, GalaxyRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IStarSystemRepository, StarSystemRepository>();
+        services.AddScoped<IDestinationRepository, DestinationRepository>();
     }
 
     public static void RegisterServices(IServiceCollection services)
     {
         services.AddScoped<IGalaxyService, GalaxyService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IStarSystemService, StarSystemService>();
+        services.AddScoped<IDestinationService, DestinationService>();
     }
 
 }
