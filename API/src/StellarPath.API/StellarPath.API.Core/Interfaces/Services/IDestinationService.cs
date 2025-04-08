@@ -10,4 +10,8 @@ public interface IDestinationService
     Task<int> CreateDestinationAsync(DestinationDto destinationDto);
     Task<bool> UpdateDestinationAsync(DestinationDto destinationDto);
     Task<bool> DeactivateDestinationAsync(int id);
+    Task<bool> ActivateDestinationAsync(int id);
+    Task<IEnumerable<DestinationDto>> SearchDestinationsAsync(
+    string? name, int? systemId, string? systemName,
+    long? minDistance, long? maxDistance, bool? isActive);
 }

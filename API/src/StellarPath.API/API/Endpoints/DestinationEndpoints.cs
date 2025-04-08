@@ -1,4 +1,5 @@
-﻿using StellarPath.API.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 
 namespace API.Endpoints;
@@ -56,14 +57,17 @@ public static class DestinationEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization("Admin");
 
+        destinationGroup.MapPatch("/{id}/activate", ActivateDestination)
+            .WithName("ActivateDestination")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
-    private static async Task<IResult> GetAllDestinations(IDestinationService destinationService)
-    {
-        var destinations = await destinationService.GetAllDestinationsAsync();
-        return Results.Ok(destinations);
-    }
 
     private static async Task<IResult> GetActiveDestinations(IDestinationService destinationService)
     {
@@ -139,5 +143,39 @@ public static class DestinationEndpoints
 
         await destinationService.DeactivateDestinationAsync(id);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> ActivateDestination(int id, IDestinationService destinationService)
+    {
+        var destination = await destinationService.GetDestinationByIdAsync(id);
+        if (destination == null)
+        {
+            return Results.NotFound();
+        }
+
+        await destinationService.ActivateDestinationAsync(id);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetAllDestinations(
+        [FromQuery] string? name,
+        [FromQuery] int? systemId,
+        [FromQuery] string? systemName,
+        [FromQuery] long? minDistance,
+        [FromQuery] long? maxDistance,
+        [FromQuery] bool? isActive,
+        IDestinationService destinationService)
+    {
+        if (!string.IsNullOrEmpty(name) || systemId.HasValue ||
+            !string.IsNullOrEmpty(systemName) || minDistance.HasValue ||
+            maxDistance.HasValue || isActive.HasValue)
+        {
+            var destinations = await destinationService.SearchDestinationsAsync(
+                name, systemId, systemName, minDistance, maxDistance, isActive);
+            return Results.Ok(destinations);
+        }
+
+        var allDestinations = await destinationService.GetAllDestinationsAsync();
+        return Results.Ok(allDestinations);
     }
 }

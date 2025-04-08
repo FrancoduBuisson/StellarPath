@@ -89,6 +89,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IStarSystemRepository, StarSystemRepository>();
         services.AddScoped<IDestinationRepository, DestinationRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
     }
 
     public static void RegisterServices(IServiceCollection services)

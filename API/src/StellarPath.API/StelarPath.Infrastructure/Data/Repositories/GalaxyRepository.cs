@@ -34,5 +34,32 @@ public class GalaxyRepository(IUnitOfWork unitOfWork) : Repository<Galaxy>(unitO
         var result = await UnitOfWork.Connection.ExecuteAsync(query, entity);
         return result > 0;
     }
+
+    public async Task<IEnumerable<Galaxy>> SearchGalaxiesAsync(string? name, bool? isActive)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            conditions.Add("galaxy_name ILIKE @Name");
+            parameters.Add("Name", $"%{name}%");
+        }
+
+        if (isActive.HasValue)
+        {
+            conditions.Add("is_active = @IsActive");
+            parameters.Add("IsActive", isActive.Value);
+        }
+
+        var query = $"SELECT * FROM {TableName}";
+
+        if (conditions.Count > 0)
+        {
+            query += " WHERE " + string.Join(" AND ", conditions);
+        }
+
+        return await UnitOfWork.Connection.QueryAsync<Galaxy>(query, parameters);
+    }
 }
 

@@ -5,6 +5,6 @@ public class DestinationDto
     public string Name { get; set; } = string.Empty;
     public int SystemId { get; set; }
     public string? SystemName { get; set; }
-    public int DistanceFromEarth { get; set; }
+    public long DistanceFromEarth { get; set; }
     public bool IsActive { get; set; }
 }
