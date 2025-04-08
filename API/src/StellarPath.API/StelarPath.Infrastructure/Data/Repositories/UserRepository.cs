@@ -64,5 +64,58 @@ public class UserRepository(IUnitOfWork unitOfWork) : Repository<User>(unitOfWor
         var query = $"DELETE FROM {TableName} WHERE google_id = @GoogleId";
         return await UnitOfWork.Connection.ExecuteAsync(query, new { GoogleId = googleId}) > 0;
     }
+
+    public async Task<IEnumerable<User>> SearchUsersAsync(
+    string? name, string? firstName, string? lastName,
+    string? email, int? roleId, bool? isActive)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            conditions.Add("(first_name ILIKE @Name OR last_name ILIKE @Name OR email ILIKE @Name)");
+            parameters.Add("Name", $"%{name}%");
+        }
+
+        if (!string.IsNullOrEmpty(firstName))
+        {
+            conditions.Add("first_name ILIKE @FirstName");
+            parameters.Add("FirstName", $"%{firstName}%");
+        }
+
+        if (!string.IsNullOrEmpty(lastName))
+        {
+            conditions.Add("last_name ILIKE @LastName");
+            parameters.Add("LastName", $"%{lastName}%");
+        }
+
+        if (!string.IsNullOrEmpty(email))
+        {
+            conditions.Add("email ILIKE @Email");
+            parameters.Add("Email", $"%{email}%");
+        }
+
+        if (roleId.HasValue)
+        {
+            conditions.Add("role_id = @RoleId");
+            parameters.Add("RoleId", roleId.Value);
+        }
+
+        if (isActive.HasValue)
+        {
+            conditions.Add("is_active = @IsActive");
+            parameters.Add("IsActive", isActive.Value);
+        }
+
+        var query = $"SELECT * FROM {TableName}";
+
+        if (conditions.Count > 0)
+        {
+            query += " WHERE " + string.Join(" AND ", conditions);
+        }
+
+        return await UnitOfWork.Connection.QueryAsync<User>(query, parameters);
+    }
 }
 

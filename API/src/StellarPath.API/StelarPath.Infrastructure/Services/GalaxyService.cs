@@ -24,6 +24,38 @@ public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitO
         }
     }
 
+    public async Task<bool> ActivateGalaxyAsync(int id)
+    {
+        try
+        {
+            var galaxy = await galaxyRepository.GetByIdAsync(id);
+            if (galaxy == null)
+            {
+                return false;
+            }
+
+            unitOfWork.BeginTransaction();
+
+            galaxy.IsActive = true;
+            var result = await galaxyRepository.UpdateAsync(galaxy);
+
+            unitOfWork.Commit();
+
+            return result;
+        }
+        catch
+        {
+            unitOfWork.Rollback();
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<GalaxyDto>> SearchGalaxiesAsync(string? name, bool? isActive)
+    {
+        var galaxies = await galaxyRepository.SearchGalaxiesAsync(name, isActive);
+        return galaxies.Select(MapToDto);
+    }
+
     public async Task<bool> DeactivateGalaxyAsync(int id)
     {
         try
@@ -77,6 +109,12 @@ public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitO
             unitOfWork.Rollback();
             throw;
         }
+    }
+
+    public async Task<IEnumerable<GalaxyDto>> GetActiveGalaxiesAsync()
+    {
+        var galaxies = await galaxyRepository.GetActiveGalaxiesAsync();
+        return galaxies.Select(MapToDto);
     }
 
     private static GalaxyDto MapToDto(Galaxy galaxy)

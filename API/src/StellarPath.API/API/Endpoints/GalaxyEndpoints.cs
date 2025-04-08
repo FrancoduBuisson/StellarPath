@@ -1,4 +1,5 @@
-﻿using StellarPath.API.Core.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 
 namespace API.Endpoints;
@@ -18,6 +19,11 @@ public static class GalaxyEndpoints
             .WithName("GetGalaxyById")
             .Produces<GalaxyDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError);
+
+        galaxyGroup.MapGet("/active", GetActiveGalaxies)
+            .WithName("GetActiveGalaxies")
+            .Produces<IEnumerable<GalaxyDto>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status500InternalServerError);
 
         galaxyGroup.MapPost("/", CreateGalaxy)
@@ -43,16 +49,19 @@ public static class GalaxyEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError)
             .Produces(StatusCodes.Status401Unauthorized)
-            .RequireAuthorization("Admin"); 
+            .RequireAuthorization("Admin");
+
+        galaxyGroup.MapPatch("/{id}/activate", ActivateGalaxy)
+            .WithName("ActivateGalaxy")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
 
         return app;
     }
 
-    private static async Task<IResult> GetAllGalaxies(IGalaxyService galaxyService)
-    {
-        var galaxies = await galaxyService.GetAllGalaxiesAsync();
-        return Results.Ok(galaxies);
-    }
 
     private static async Task<IResult> GetGalaxyById(int id, IGalaxyService galaxyService)
     {
@@ -98,6 +107,39 @@ public static class GalaxyEndpoints
 
         await galaxyService.DeactivateGalaxyAsync(id);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> ActivateGalaxy(int id, IGalaxyService galaxyService)
+    {
+        var galaxy = await galaxyService.GetGalaxyByIdAsync(id);
+        if (galaxy == null)
+        {
+            return Results.NotFound();
+        }
+
+        await galaxyService.ActivateGalaxyAsync(id);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetAllGalaxies(
+    [FromQuery] string? name,
+    [FromQuery] bool? isActive,
+    IGalaxyService galaxyService)
+    {
+        if (!string.IsNullOrEmpty(name) || isActive.HasValue)
+        {
+            var galaxies = await galaxyService.SearchGalaxiesAsync(name, isActive);
+            return Results.Ok(galaxies);
+        }
+
+        var allGalaxies = await galaxyService.GetAllGalaxiesAsync();
+        return Results.Ok(allGalaxies);
+    }
+
+    private static async Task<IResult> GetActiveGalaxies(IGalaxyService galaxyService)
+    {
+        var galaxies = await galaxyService.GetActiveGalaxiesAsync();
+        return Results.Ok(galaxies);
     }
 }
 

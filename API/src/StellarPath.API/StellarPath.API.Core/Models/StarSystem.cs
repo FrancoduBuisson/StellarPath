@@ -1,8 +1,9 @@
 ﻿namespace StellarPath.API.Core.Models;
-public class Galaxy
+public class StarSystem
 {
+    public int SystemId { get; set; }
+    public required string SystemName { get; set; }
     public int GalaxyId { get; set; }
-    public required string GalaxyName  { get; set; }
     public bool IsActive { get; set; }
 }
 
