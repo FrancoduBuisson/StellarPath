@@ -55,14 +55,6 @@ public static class SpaceshipEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization("Admin");
 
-        spaceshipGroup.MapDelete("/{id}", DeleteSpaceship)
-            .WithName("DeleteSpaceship")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status500InternalServerError)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .RequireAuthorization("Admin");
-
         spaceshipGroup.MapPatch("/{id}/deactivate", DeactivateSpaceship)
             .WithName("DeactivateSpaceship")
             .Produces(StatusCodes.Status204NoContent)

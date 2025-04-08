@@ -38,14 +38,6 @@ public static class ShipModelEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization("Admin");
 
-        shipModelGroup.MapDelete("/{id}", DeleteShipModel)
-            .WithName("DeleteShipModel")
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status500InternalServerError)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .RequireAuthorization("Admin");
-
         return app;
     }
 
@@ -134,3 +126,4 @@ public static class ShipModelEndpoints
         await shipModelService.DeleteShipModelAsync(id);
         return Results.NoContent();
     }
+}
