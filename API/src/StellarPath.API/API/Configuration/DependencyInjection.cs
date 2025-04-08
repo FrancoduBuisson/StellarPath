@@ -90,6 +90,8 @@ public static class DependencyInjection
         services.AddScoped<IStarSystemRepository, StarSystemRepository>();
         services.AddScoped<IDestinationRepository, DestinationRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IShipModelRepository, ShipModelRepository>();
+        services.AddScoped<ISpaceshipRepository, SpaceshipRepository>();
     }
 
     public static void RegisterServices(IServiceCollection services)
@@ -98,6 +100,8 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IStarSystemService, StarSystemService>();
         services.AddScoped<IDestinationService, DestinationService>();
+        services.AddScoped<IShipModelService, ShipModelService>();
+        services.AddScoped<ISpaceshipService, SpaceshipService>();
     }
 
 }
