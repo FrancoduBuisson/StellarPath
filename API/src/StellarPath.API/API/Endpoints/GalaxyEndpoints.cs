@@ -20,6 +20,11 @@ public static class GalaxyEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status500InternalServerError);
 
+        galaxyGroup.MapGet("/active", GetActiveGalaxies)
+            .WithName("GetActiveGalaxies")
+            .Produces<IEnumerable<GalaxyDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status500InternalServerError);
+
         galaxyGroup.MapPost("/", CreateGalaxy)
             .WithName("CreateGalaxy")
             .Produces<int>(StatusCodes.Status201Created)
@@ -98,6 +103,12 @@ public static class GalaxyEndpoints
 
         await galaxyService.DeactivateGalaxyAsync(id);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetActiveGalaxies(IGalaxyService galaxyService)
+    {
+        var galaxies = await galaxyService.GetActiveGalaxiesAsync();
+        return Results.Ok(galaxies);
     }
 }
 

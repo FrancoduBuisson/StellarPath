@@ -79,6 +79,12 @@ public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitO
         }
     }
 
+    public async Task<IEnumerable<GalaxyDto>> GetActiveGalaxiesAsync()
+    {
+        var galaxies = await galaxyRepository.GetActiveGalaxiesAsync();
+        return galaxies.Select(MapToDto);
+    }
+
     private static GalaxyDto MapToDto(Galaxy galaxy)
     {
         return new GalaxyDto

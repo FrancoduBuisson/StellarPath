@@ -5,6 +5,7 @@ public interface IGalaxyService
 {
     Task<IEnumerable<GalaxyDto>> GetAllGalaxiesAsync();
     Task<GalaxyDto?> GetGalaxyByIdAsync(int id);
+    Task<IEnumerable<GalaxyDto>> GetActiveGalaxiesAsync();
     Task<int> CreateGalaxyAsync(GalaxyDto galaxyDto);
     Task<bool> UpdateGalaxyAsync(GalaxyDto galaxyDto);
     Task<bool> DeactivateGalaxyAsync(int id);
