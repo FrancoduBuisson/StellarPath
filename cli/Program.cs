@@ -1,26 +1,71 @@
-﻿using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.CommandLine.NamingConventionBinder;
+﻿using CLI.Command;
+using CLI.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.Data;
+using System.Threading;
 
 class Program
 {
-    static int Main(string[] args)
+
+    static async Task Main()
     {
-        var rootCommand = new RootCommand
-        {
-            new Option<int>("--number", "An integer option"),
-            new Option<bool>("--flag", "A boolean option"),
-            new Argument<string>("input", "A required input argument")
-        };
+        string command;
+        PrintStellarPath();
 
-        rootCommand.Description = "A simple CLI app";
-        rootCommand.Handler = CommandHandler.Create<int, bool, string>((number, flag, input) =>
-        {
-            Console.WriteLine($"Number: {number}");
-            Console.WriteLine($"Flag: {flag}");
-            Console.WriteLine($"Input: {input}");
-        });
+        IHost _host = Host.CreateDefaultBuilder().ConfigureServices(
+            services =>
+            {
+                services.AddSingleton<IApplication, Application>();
+            })
+            .Build();
 
-        return rootCommand.Invoke(args);
+        var app = _host.Services.GetRequiredService<IApplication>();
+        app.Run();
+
+        using (var httpClient = new HttpClient())
+        { 
+            do
+            {
+                Console.WriteLine("Enter a command (type 'quit' to exit):");
+                command = Console.ReadLine()?.Trim().ToLower();
+
+                switch (command)
+                {
+
+                    case "login":
+                        var loginCommand = new LoginCommand(httpClient);  // Pass HttpClient to LoginCommand
+                        await loginCommand.ExecuteAsync();  // Call ExecuteAsync to perform the login
+                        break;
+
+                    case "quit":
+                        Console.WriteLine("Exiting program...");
+                        break;
+
+                    default:
+                        Console.WriteLine("Unknown command. Type 'quit' to exit or 'login' to log in.");
+                        break;
+                }
+
+            } while (command.ToLower() != "quit" && command.ToLower() != "exit");
+        }
+        Console.WriteLine("Good bye...."); 
+    }
+
+    static void PrintStellarPath()
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.BackgroundColor = ConsoleColor.Black;
+
+        string bannerText = @"
+        ╔══════════════════════════════════════════════════════════════════════════════════════════╗
+        ║                                                                                          ║
+        ║                                     STELLAR PATH CLI                                     ║
+        ║                                                                                          ║
+        ╚══════════════════════════════════════════════════════════════════════════════════════════╝
+        ";                                                
+        Console.WriteLine(bannerText);
+        Console.ResetColor();
     }
 }
