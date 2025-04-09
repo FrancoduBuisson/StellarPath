@@ -81,62 +81,45 @@ jobs:
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
           docker push $REPOSITORY_URI:$IMAGE_TAG
 
-  deploy:
+deploy:
     needs: publish
     runs-on: ubuntu-latest
     environment: Production
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+          - name: Checkout Repository
+            uses: actions/checkout@v4
 
-      - name: Configure AWS credentials using OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
-          aws-region: ${{ env.AWS_REGION }}
+          - name: Configure AWS credentials using OIDC
+            uses: aws-actions/configure-aws-credentials@v4
+            with:
+            role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+            aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ">= 1.0"
+          - name: Setup Terraform
+            uses: hashicorp/setup-terraform@v3
+            with:
+            terraform_version: ">= 1.0"
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: terraform
+          - name: Terraform Init
+            run: terraform init
+            working-directory: terraform
 
-      - name: Extract Terraform Outputs
-        uses: dflook/terraform-output@v1
-        id: tf-outputs
-        with:
-          path: terraform
+          - name: Extract Terraform Outputs
+            uses: dflook/terraform-output@v1
+            id: tf-outputs
+            with:
+            path: terraform
 
-      - name: Terraform Plan (Check for Changes)
-        id: tf-plan
-        run: |
-          terraform plan -detailed-exitcode -out=tfplan -var "db_password=${{ secrets.DB_PASSWORD }}"
+          - name: Force ECS Redeploy
+            run: |
+              echo "Forcing ECS service redeploy to pull latest image..."
+              aws ecs update-service --cluster "${{ github.event.repository.name }}-cluster" --service "${{ github.event.repository.name }}-service" --force-new-deployment
+            env:
+              AWS_REGION: ${{ env.AWS_REGION }}
 
-        working-directory: terraform
-        continue-on-error: true
+          - name: Wait for ECS Service Stability
+            run: |
+              aws ecs wait service-stable --cluster "${{ github.event.repository.name }}-cluster" --service "${{ github.event.repository.name }}-service"
+            env:
+            AWS_REGION: ${{ env.AWS_REGION }}
 
-      - name: Apply Terraform (If Changes)
-        if: env.TF_PLAN_EXIT == '2'
-        run: terraform apply -auto-approve tfplan
-        working-directory: terraform
-
-      - name: No Infra Changes - Force ECS Redeploy
-        if: env.TF_PLAN_EXIT == '0'
-        run: |
-          echo "No Terraform changes detected. Forcing ECS service redeploy to pull latest image..."
-          aws ecs update-service \
-            --cluster "${{ github.event.repository.name }}-cluster" \
-            --service "${{ github.event.repository.name }}-service" \
-            --force-new-deployment
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
-
-      - name: Wait for ECS Service Stability
-        run: |
-          aws ecs wait service-stable --cluster "${{ github.event.repository.name }}-cluster" \
-            --service "${{ github.event.repository.name }}-service"
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
