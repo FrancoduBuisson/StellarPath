@@ -83,7 +83,7 @@ jobs:
         uses: dflook/terraform-output@v1
         id: tf-outputs
         with:
-          path: terraform
+          path: ${{ github.workspace }}/terraform
       - name: Force ECS Redeploy
         run: |
           echo "Forcing ECS service redeploy to pull latest image..."
