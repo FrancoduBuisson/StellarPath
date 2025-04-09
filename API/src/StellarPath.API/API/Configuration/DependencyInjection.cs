@@ -92,6 +92,8 @@ public static class DependencyInjection
         services.AddScoped<IRoleRepository, RoleRepository>();
         services.AddScoped<IShipModelRepository, ShipModelRepository>();
         services.AddScoped<ISpaceshipRepository, SpaceshipRepository>();
+        services.AddScoped<ICruiseRepository, CruiseRepository>();
+        services.AddScoped<ICruiseStatusRepository, CruiseStatusRepository>();
     }
 
     public static void RegisterServices(IServiceCollection services)
@@ -102,6 +104,8 @@ public static class DependencyInjection
         services.AddScoped<IDestinationService, DestinationService>();
         services.AddScoped<IShipModelService, ShipModelService>();
         services.AddScoped<ISpaceshipService, SpaceshipService>();
+        services.AddScoped<ICruiseService, CruiseService>();
+        services.AddScoped<ICruiseStatusService, CruiseStatusService>();
     }
 
 }

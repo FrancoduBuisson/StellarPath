@@ -1,4 +1,5 @@
-﻿using StellarPath.API.Core.DTOs;
+﻿using StelarPath.API.Infrastructure.Data.Repositories;
+using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces;
 using StellarPath.API.Core.Interfaces.Repositories;
 using StellarPath.API.Core.Interfaces.Services;
@@ -9,6 +10,8 @@ namespace StelarPath.API.Infrastructure.Services;
 public class SpaceshipService(
     ISpaceshipRepository spaceshipRepository,
     IShipModelRepository shipModelRepository,
+    ICruiseStatusService cruiseStatusService,
+    ICruiseRepository cruiseRepository,
     IUnitOfWork unitOfWork) : ISpaceshipService
 {
     public async Task<int> CreateSpaceshipAsync(SpaceshipDto spaceshipDto)
@@ -184,40 +187,110 @@ public class SpaceshipService(
     }
 
     public async Task<IEnumerable<SpaceshipAvailabilityDto>> GetAvailableSpaceshipsForTimeRangeAsync(
-        DateTime startTime, DateTime endTime)
+       DateTime startTime, DateTime endTime)
     {
-        // This is a placeholder implementation. In a real application, you would:
-        // 1. Get all active spaceships
-        // 2. Join with cruises table to find which spaceships are already booked during the requested time range
-        // 3. For each available spaceship, calculate available time slots
-
         var activeSpaceships = await spaceshipRepository.GetActiveSpaceshipsAsync();
         var availabilityDtos = new List<SpaceshipAvailabilityDto>();
+
+        int cancelledStatusId = await cruiseStatusService.GetCancelledStatusIdAsync();
 
         foreach (var spaceship in activeSpaceships)
         {
             var model = await shipModelRepository.GetByIdAsync(spaceship.ModelId);
             if (model == null) continue;
 
-            // Here you would check against the cruises table to determine real availability
-            // For now, we'll just return all active spaceships as available for the full time range
-            availabilityDtos.Add(new SpaceshipAvailabilityDto
+            // all cruises for this spaceship that overlap with the requested time range + not cancelled
+            var overlappingCruises = await cruiseRepository.GetOverlappingCruisesForSpaceshipAsync(
+                spaceship.SpaceshipId, startTime, endTime);
+
+            // spaceship is fully available
+            if (!overlappingCruises.Any())
             {
-                SpaceshipId = spaceship.SpaceshipId,
-                ModelId = model.ModelId,
-                ModelName = model.ModelName,
-                Capacity = model.Capacity,
-                CruiseSpeedKmph = model.CruiseSpeedKmph,
-                IsActive = spaceship.IsActive,
-                AvailableTimeSlots = new List<TimeSlot>
+                availabilityDtos.Add(new SpaceshipAvailabilityDto
                 {
-                    new TimeSlot { StartTime = startTime, EndTime = endTime }
-                }
-            });
+                    SpaceshipId = spaceship.SpaceshipId,
+                    ModelId = model.ModelId,
+                    ModelName = model.ModelName,
+                    Capacity = model.Capacity,
+                    CruiseSpeedKmph = model.CruiseSpeedKmph,
+                    IsActive = spaceship.IsActive,
+                    AvailableTimeSlots = new List<TimeSlot>
+                    {
+                        new TimeSlot { StartTime = startTime, EndTime = endTime }
+                    }
+                });
+                continue;
+            }
+
+            // can calculate available time slots
+            var timeSlots = CalculateAvailableTimeSlots(startTime, endTime, overlappingCruises);
+
+            if (timeSlots.Any())
+            {
+                availabilityDtos.Add(new SpaceshipAvailabilityDto
+                {
+                    SpaceshipId = spaceship.SpaceshipId,
+                    ModelId = model.ModelId,
+                    ModelName = model.ModelName,
+                    Capacity = model.Capacity,
+                    CruiseSpeedKmph = model.CruiseSpeedKmph,
+                    IsActive = spaceship.IsActive,
+                    AvailableTimeSlots = timeSlots
+                });
+            }
         }
 
         return availabilityDtos;
     }
+
+    // actually do the overlap calc
+    private List<TimeSlot> CalculateAvailableTimeSlots(DateTime rangeStart, DateTime rangeEnd, IEnumerable<Cruise> overlappingCruises)
+    {
+        var timeSlots = new List<TimeSlot>();
+        var busySlots = new List<(DateTime Start, DateTime End)>();
+
+        // convert all cruises to busy time slots
+        foreach (var cruise in overlappingCruises)
+        {
+            var cruiseEnd = cruise.LocalDepartureTime.AddMinutes(cruise.DurationMinutes);
+            busySlots.Add((cruise.LocalDepartureTime, cruiseEnd));
+        }
+
+        // sort by start time
+        busySlots = busySlots.OrderBy(s => s.Start).ToList();
+
+        // find available slots
+        DateTime currentStart = rangeStart;
+
+        foreach (var (busyStart, busyEnd) in busySlots)
+        {
+            // if there's a gap before this busy slot, add it as available
+            if (currentStart < busyStart)
+            {
+                timeSlots.Add(new TimeSlot
+                {
+                    StartTime = currentStart,
+                    EndTime = busyStart
+                });
+            }
+
+            // move on to next
+            currentStart = busyEnd > currentStart ? busyEnd : currentStart;
+        }
+
+        // add finfal if need
+        if (currentStart < rangeEnd)
+        {
+            timeSlots.Add(new TimeSlot
+            {
+                StartTime = currentStart,
+                EndTime = rangeEnd
+            });
+        }
+
+        return timeSlots;
+    }
+
 
     private async Task<SpaceshipDto> MapToDtoWithModelDetailsAsync(Spaceship spaceship)
     {
