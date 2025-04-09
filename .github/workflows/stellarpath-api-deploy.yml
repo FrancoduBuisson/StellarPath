@@ -113,7 +113,8 @@ jobs:
       - name: Terraform Plan (Check for Changes)
         id: tf-plan
         run: |
-          terraform plan -detailed-exitcode -out=tfplan || echo "TF_PLAN_EXIT=$?" >> $GITHUB_ENV
+          terraform plan -detailed-exitcode -out=tfplan -var "db_password=${{ secrets.DB_PASSWORD }}"
+
         working-directory: terraform
         continue-on-error: true
 
