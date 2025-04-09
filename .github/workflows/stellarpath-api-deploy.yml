@@ -80,12 +80,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Setup and initialize Terraform
         uses: hashicorp/setup-terraform@v2
-      - name: Terraform Init and Output
+      - name: Terraform Init & Output
+        working-directory: API/src/StellarPath.API/terraform
         run: |
-          cd terraform
           terraform init
           terraform output
-        working-directory: terraform
       - name: Extract Terraform Outputs
         uses: dflook/terraform-output@v1
         id: tf-outputs
