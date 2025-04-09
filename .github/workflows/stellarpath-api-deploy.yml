@@ -78,13 +78,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
           aws-region: ${{ env.AWS_REGION }}
-      - name: Setup and initialize Terraform
-        uses: hashicorp/setup-terraform@v2
-      - name: Terraform Init & Output
-        working-directory: terraform
-        run: |
-          terraform init
-          terraform output
+          
       - name: Extract Terraform Outputs
         uses: dflook/terraform-output@v1
         id: tf-outputs
