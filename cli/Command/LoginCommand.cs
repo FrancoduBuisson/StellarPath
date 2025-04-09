@@ -10,77 +10,59 @@ namespace CLI.Command
 {
     public class LoginCommand
     {
-        private readonly HttpClient _httpClient;
+        private readonly HttpClient _client = new HttpClient();
+        private readonly string _baseUrl = "https://localhost:5291/api/auth";
 
-        // The API URL to initiate Google login
-        private string googleAuthUrl = "http://localhost:5291/api/auth/google"; // The URL to trigger Google login
-        private string redirectUri = "http://localhost:5291/auth/callback"; // The redirect URI where the authorization code will be sent
+        //public LoginCommand(HttpClient client)
+        //{
+        //    this.client = client;
+        //}
 
-        public LoginCommand(HttpClient httpClient)
+        public async Task LoginAsync()
         {
-            _httpClient = httpClient;
-        }
+            string? idToken = null;
 
-        public async Task ExecuteAsync()
-        {
-            // Step 1: Open the browser to initiate the OAuth login flow
-            Console.WriteLine("Opening Google login page...");
-            OpenGoogleLogin();
-
-            // Step 2: Wait for the user to complete the login and catch the code
-            Console.WriteLine($"After logging in with Google, please paste the authorization code from the URL (after {redirectUri})");
-
-            // This is where the user would provide the code received after redirect
-            Console.Write("Enter the authorization code from the URL: ");
-            string authorizationCode = Console.ReadLine();
-
-            if (string.IsNullOrEmpty(authorizationCode))
-            {
-                Console.WriteLine("No authorization code provided.");
-                return;
-            }
-
-            // Step 3: Exchange the authorization code for an access token
-            await ExchangeCodeForTokenAsync(authorizationCode);
-        }
-
-        private void OpenGoogleLogin()
-        {
-            // This will open the URL in the default web browser
-            Process.Start(new ProcessStartInfo(googleAuthUrl + "?redirect_uri=" + redirectUri) { UseShellExecute = true });
-        }
-
-        private async Task ExchangeCodeForTokenAsync(string code)
-        {
-            var tokenRequest = new
-            {
-                Code = code,
-                RedirectUri = redirectUri
-            };
-
-            var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(tokenRequest), System.Text.Encoding.UTF8, "application/json");
+            // Start local callback server
+            var tokenTask = Services.GoogleAuthService.StartLocalCallbackServer(_baseUrl);
 
             try
             {
-                // Send a POST request to exchange the authorization code for an access token
-                var response = await _httpClient.PostAsync("http://localhost:5291/api/auth/exchange", content);
+                // Request login URL from API
+                var loginResponse = await _client.GetStringAsync(_baseUrl + "/google");
+                Console.WriteLine("Open this URL to log in: " + loginResponse);
 
-                if (response.IsSuccessStatusCode)
+                // Open browser automatically
+                try
                 {
-                    // Here you can handle the successful response, which would contain the access token
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Successfully authenticated! Response: {responseBody}");
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {loginResponse}") { CreateNoWindow = true });
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Failed to open browser: " + e.Message);
+                }
+
+                // 2️⃣ Wait for user to authenticate and retrieve id token
+                idToken = await Task.WhenAny(tokenTask, Task.Delay(60000)) == tokenTask
+                    ? tokenTask.Result
+                    : null;
+
+                if (idToken != null)
+                {
+                    //Call auth api with idToken
+                    Services.GoogleAuthService.DecodeAndStoreUserInfo(idToken);
                 }
                 else
                 {
-                    Console.WriteLine($"Failed to authenticate. Response: {response.ReasonPhrase}");
+                    Console.WriteLine("Failed to retrieve id token.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Console.WriteLine($"An error occurred: {ex.Message}");
+                Console.WriteLine("Error during token retrieval: " + e.Message);
             }
         }
+
+
     }
 
 }

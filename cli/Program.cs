@@ -23,33 +23,31 @@ class Program
 
         var app = _host.Services.GetRequiredService<IApplication>();
         app.Run();
+        HttpClient client = new HttpClient();
+        do
+        {
+            Console.WriteLine("Enter a command (type 'quit' to exit):");
+            command = Console.ReadLine()?.Trim().ToLower();
 
-        using (var httpClient = new HttpClient())
-        { 
-            do
+            switch (command)
             {
-                Console.WriteLine("Enter a command (type 'quit' to exit):");
-                command = Console.ReadLine()?.Trim().ToLower();
 
-                switch (command)
-                {
+                case "login":
+                    var loginCommand = new LoginCommand();
+                    loginCommand.LoginAsync().Wait();
+                    break;
 
-                    case "login":
-                        var loginCommand = new LoginCommand(httpClient);  // Pass HttpClient to LoginCommand
-                        await loginCommand.ExecuteAsync();  // Call ExecuteAsync to perform the login
-                        break;
+                case "quit":
+                    Console.WriteLine("Exiting program...");
+                    break;
 
-                    case "quit":
-                        Console.WriteLine("Exiting program...");
-                        break;
+                default:
+                    Console.WriteLine("Unknown command. Type 'quit' to exit or 'login' to log in.");
+                    break;
+            }
 
-                    default:
-                        Console.WriteLine("Unknown command. Type 'quit' to exit or 'login' to log in.");
-                        break;
-                }
-
-            } while (command.ToLower() != "quit" && command.ToLower() != "exit");
-        }
+        } while (command.ToLower() != "quit" && command.ToLower() != "exit");
+        
         Console.WriteLine("Good bye...."); 
     }
 
