@@ -50,6 +50,7 @@ jobs:
       - name: Setup and initialize Terraform
         uses: hashicorp/setup-terraform@v2
       - name: Terraform Init
+        
         run: terraform init
         working-directory: terraform
       - name: Extract Terraform Outputs
@@ -78,8 +79,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Setup and initialize Terraform
         uses: hashicorp/setup-terraform@v2
-      - name: Terraform Init
-        run: terraform init
+      - name: Terraform Init and Output
+        run: |
+          cd terraform
+          terraform init
+          terraform output
         working-directory: terraform
       - name: Extract Terraform Outputs
         uses: dflook/terraform-output@v1
