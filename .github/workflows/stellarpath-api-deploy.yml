@@ -1,0 +1,140 @@
+name: StellarPath API deploy
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'API/src/StellarPath.API/**'
+
+env:
+  WORKING_DIRECTORY: API/src/StellarPath.API
+  AWS_REGION: af-south-1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Restore Dependencies
+        run: dotnet restore StellarPath.API.sln
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Build Project
+        run: dotnet build --no-restore -c Release
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+      - name: Run Tests
+        run: dotnet test --no-build --verbosity normal
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup and initialize Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Extract Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
+
+      - name: Publish Docker Image to Amazon ECR
+        run: |
+          REPOSITORY_URI=${{ steps.tf-outputs.outputs.ecr_repository_url }}
+          IMAGE_TAG=latest
+
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG -f docker/Dockerfile .
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+          docker push $REPOSITORY_URI:$IMAGE_TAG
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ">= 1.0"
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Extract Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
+
+      - name: Terraform Plan (Check for Changes)
+        id: tf-plan
+        run: |
+          terraform plan -detailed-exitcode -out=tfplan || echo "TF_PLAN_EXIT=$?" >> $GITHUB_ENV
+        working-directory: terraform
+        continue-on-error: true
+
+      - name: Apply Terraform (If Changes)
+        if: env.TF_PLAN_EXIT == '2'
+        run: terraform apply -auto-approve tfplan
+        working-directory: terraform
+
+      - name: No Infra Changes - Force ECS Redeploy
+        if: env.TF_PLAN_EXIT == '0'
+        run: |
+          echo "No Terraform changes detected. Forcing ECS service redeploy to pull latest image..."
+          aws ecs update-service \
+            --cluster "${{ github.event.repository.name }}-cluster" \
+            --service "${{ github.event.repository.name }}-service" \
+            --force-new-deployment
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+
+      - name: Wait for ECS Service Stability
+        run: |
+          aws ecs wait service-stable --cluster "${{ github.event.repository.name }}-cluster" \
+            --service "${{ github.event.repository.name }}-service"
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
