@@ -7,7 +7,7 @@ variable "app_name" {
 variable "db_name" {
   type        = string
   description = "The name for the database"
-  default     = "stellarpath"
+  default     = "stellarpath_db"
 }
 
 variable "db_username" {

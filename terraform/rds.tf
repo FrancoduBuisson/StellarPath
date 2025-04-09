@@ -4,7 +4,7 @@ resource "aws_db_subnet_group" "main" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier              = "steller-path-db"
+  identifier              = var.app_name
   engine                  = "postgres"
   engine_version          = "17.4"
   instance_class          = "db.t3.micro"
@@ -12,6 +12,7 @@ resource "aws_db_instance" "postgres" {
   port                    = var.db_port
   username                = var.db_username
   password                = var.db_password
+  db_name                 = var.db_name
   backup_retention_period = 7
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:05:00-sun:06:00"

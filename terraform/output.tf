@@ -18,7 +18,3 @@ output "rds_endpoint" {
   description = "The endpoint of the RDS instance"
 }
 
-output "vpc_id" {
-  value       = aws_vpc.main.id
-  description = "The ID of the VPC"
-}
