@@ -74,11 +74,16 @@ jobs:
       - name: Force ECS Redeploy
         run: |
           echo "Forcing ECS service redeploy to pull latest image..."
-          aws ecs update-service --cluster "${{ github.event.repository.name }}-cluster" --service "${{ github.event.repository.name }}-service" --force-new-deployment
+          CLUSTER_NAME="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE_NAME="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          aws ecs update-service --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME" --force-new-deployment
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
+     
       - name: Wait for ECS Service Stability
         run: |
-          aws ecs wait service-stable --cluster "${{ github.event.repository.name }}-cluster" --service "${{ github.event.repository.name }}-service"
+          CLUSTER_NAME="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE_NAME="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          aws ecs wait service-stable --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME"
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
