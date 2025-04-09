@@ -84,6 +84,6 @@ jobs:
         run: |
           CLUSTER_NAME="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
           SERVICE_NAME="${{ steps.tf-outputs.outputs.ecs_service_name }}"
-          aws ecs wait service-stable --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME"
+          aws ecs wait services-stable --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME"
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
