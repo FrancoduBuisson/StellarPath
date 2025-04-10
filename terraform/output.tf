@@ -18,3 +18,8 @@ output "rds_endpoint" {
   description = "The endpoint of the RDS instance"
 }
 
+output "alb_dns_name" {
+  value       = aws_lb.api.dns_name
+  description = "The DNS name of the load balancer"
+}
+
