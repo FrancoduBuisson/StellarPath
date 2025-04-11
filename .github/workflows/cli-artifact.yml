@@ -30,8 +30,9 @@ jobs:
    - name: Create GitHub Release
      uses: softprops/action-gh-release@v2
      with:
-       tag_name: ${{ github.ref_name }}
-       files: release-artifact.zip
+        tag_name: v1.0.0
+        name: StellarPath CLI
+        files: release-artifact.zip
      env:
        GITHUB_TOKEN: ${{ secrets.TOKEN }}
    
