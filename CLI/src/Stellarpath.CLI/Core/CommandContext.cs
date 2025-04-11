@@ -14,7 +14,7 @@ public class CommandContext
     {
         HttpClient = new HttpClient
         {
-            BaseAddress = new Uri("https://localhost:7029")
+            BaseAddress = new Uri("http://stellar-path-api-alb-357221888.af-south-1.elb.amazonaws.com")
         };
     }
 
