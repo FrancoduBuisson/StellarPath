@@ -17,6 +17,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection RegisterApplicationService(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddHttpClient();
 
         services.Configure<GoogleAuthSettings>(configuration.GetSection("GoogleAuth"));
         services.Configure<JWTSettings>(configuration.GetSection("Jwt"));

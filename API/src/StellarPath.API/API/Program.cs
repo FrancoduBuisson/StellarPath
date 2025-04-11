@@ -75,6 +75,6 @@ app.RegisterUserEndpoints();
 app.RegisterShipModelEndpoints();
 app.RegisterSpaceshipEndpoints();
 app.RegisterCruiseEndpoints();
-app.RegisterBookingEndpoints();
+app.RegisterHealthCheckEndpoint();
 
 app.Run();

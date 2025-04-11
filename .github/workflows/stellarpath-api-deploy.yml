@@ -1,0 +1,89 @@
+name: StellarPath API deploy
+permissions:
+  id-token: write
+  contents: read
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'API/src/StellarPath.API/**'
+env:
+  WORKING_DIRECTORY: API/src/StellarPath.API
+  AWS_REGION: af-south-1
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      - name: Restore Dependencies
+        run: dotnet restore StellarPath.API.sln
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+      - name: Build Project
+        run: dotnet build --no-restore -c Release
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+      - name: Run Tests
+        run: dotnet test --no-build --verbosity normal
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+  publish-and-deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+          
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsOIDCRole
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup and initialize Terraform
+        uses: hashicorp/setup-terraform@v2
+      - name: Terraform Init and Output
+        run: |
+          cd terraform
+          terraform init
+          terraform output
+      - name: Extract Terraform Outputs
+        uses: dflook/terraform-output@v1
+        id: tf-outputs
+        with:
+          path: terraform
+      - name: Publish Docker Image to Amazon ECR
+        run: |
+          REPOSITORY_URI=${{ steps.tf-outputs.outputs.ecr_repository_url }}
+          IMAGE_TAG=latest
+          
+          cd API/src/StellarPath.API
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG -f docker/Dockerfile .
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+          docker push $REPOSITORY_URI:$IMAGE_TAG
+
+      - name: Force ECS Redeploy
+        run: |
+          echo "Forcing ECS service redeploy to pull latest image..."
+          CLUSTER_NAME="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE_NAME="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          aws ecs update-service --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME" --force-new-deployment
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+     
+      - name: Wait for ECS Service Stability
+        run: |
+          CLUSTER_NAME="${{ steps.tf-outputs.outputs.ecs_cluster_name }}"
+          SERVICE_NAME="${{ steps.tf-outputs.outputs.ecs_service_name }}"
+          aws ecs wait services-stable --cluster "$CLUSTER_NAME" --service "$SERVICE_NAME"
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
