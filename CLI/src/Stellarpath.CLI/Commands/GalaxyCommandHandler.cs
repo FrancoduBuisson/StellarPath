@@ -2,6 +2,7 @@
 using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
+using Stellarpath.CLI.UI;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -18,7 +19,6 @@ public class GalaxyCommandHandler
 
     public async Task HandleAsync()
     {
-        // different options based on role
         var options = new List<string>
         {
             "List All Galaxies",
@@ -27,7 +27,6 @@ public class GalaxyCommandHandler
             "Search Galaxies"
         };
 
-        // admin specific
         if (_context.CurrentUser?.Role == "Admin")
         {
             options.AddRange(new[]
@@ -116,7 +115,7 @@ public class GalaxyCommandHandler
             .StartAsync("Fetching galaxies for selection...", async ctx =>
             {
                 var galaxies = await _galaxyService.GetAllGalaxiesAsync();
-                
+
                 if (!galaxies.Any())
                 {
                     AnsiConsole.MarkupLine("[yellow]No galaxies found.[/]");
@@ -127,34 +126,34 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-            var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-            if (!allGalaxies.Any())
+        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        if (!allGalaxies.Any())
+        {
+            return;
+        }
+
+        var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
+        var selectedGalaxyName = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select a galaxy to view details")
+                .PageSize(10)
+                .HighlightStyle(new Style(Color.Green))
+                .AddChoices(galaxyNames));
+
+        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .SpinnerStyle("green")
+            .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
             {
-                return;
-            }
+                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
 
-            var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-            var selectedGalaxyName = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select a galaxy to view details")
-                    .PageSize(10)
-                    .HighlightStyle(new Style(Color.Green))
-                    .AddChoices(galaxyNames));
-
-            int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Star)
-                .SpinnerStyle("green")
-                .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
+                if (galaxy != null)
                 {
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                    
-                    if (galaxy != null)
-                    {
-                        DisplayGalaxyDetails(galaxy);
-                    }
-                });
+                    DisplayGalaxyDetails(galaxy);
+                }
+            });
     }
 
     private async Task SearchGalaxiesAsync()
@@ -179,7 +178,7 @@ public class GalaxyCommandHandler
             .StartAsync("Searching galaxies...", async ctx =>
             {
                 var galaxies = await _galaxyService.SearchGalaxiesAsync(searchCriteria);
-                
+
                 string title = "Search Results for Galaxies";
                 if (!string.IsNullOrEmpty(searchCriteria.Name))
                 {
@@ -189,7 +188,7 @@ public class GalaxyCommandHandler
                 {
                     title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
                 }
-                
+
                 DisplayGalaxies(galaxies, title);
             });
     }
@@ -214,11 +213,11 @@ public class GalaxyCommandHandler
             .StartAsync("Creating galaxy...", async ctx =>
             {
                 var result = await _galaxyService.CreateGalaxyAsync(newGalaxy);
-                
+
                 if (result.HasValue)
                 {
                     AnsiConsole.MarkupLine($"[green]Galaxy created successfully with ID: {result.Value}[/]");
-                    
+
                     var galaxy = await _galaxyService.GetGalaxyByIdAsync(result.Value);
                     if (galaxy != null)
                     {
@@ -242,7 +241,7 @@ public class GalaxyCommandHandler
             .StartAsync("Fetching galaxies for selection...", async ctx =>
             {
                 var galaxies = await _galaxyService.GetAllGalaxiesAsync();
-                
+
                 if (!galaxies.Any())
                 {
                     AnsiConsole.MarkupLine("[yellow]No galaxies found to update.[/]");
@@ -253,68 +252,68 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-            var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-            if (!allGalaxies.Any())
+        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        if (!allGalaxies.Any())
+        {
+            return;
+        }
+
+        var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
+        var selectedGalaxyName = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select a galaxy to update")
+                .PageSize(10)
+                .HighlightStyle(new Style(Color.Green))
+                .AddChoices(galaxyNames));
+
+        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .SpinnerStyle("green")
+            .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
             {
-                return;
-            }
+                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
 
-            var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-            var selectedGalaxyName = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select a galaxy to update")
-                    .PageSize(10)
-                    .HighlightStyle(new Style(Color.Green))
-                    .AddChoices(galaxyNames));
-
-            int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Star)
-                .SpinnerStyle("green")
-                .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
+                if (galaxy == null)
                 {
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                    
-                    if (galaxy == null)
-                    {
-                        return;
-                    }
-                    
-                    ctx.Status("Update galaxy details");
-                });
+                    return;
+                }
 
-            var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-            if (galaxy == null)
+                ctx.Status("Update galaxy details");
+            });
+
+        var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+        if (galaxy == null)
+        {
+            return;
+        }
+
+        AnsiConsole.MarkupLine($"[blue]Updating Galaxy ID: {galaxy.GalaxyId}[/]");
+        AnsiConsole.MarkupLine($"Current Name: [yellow]{galaxy.GalaxyName}[/]");
+        AnsiConsole.MarkupLine($"Current Status: [yellow]{(galaxy.IsActive ? "Active" : "Inactive")}[/]");
+
+        galaxy.GalaxyName = AnsiConsole.Ask("Enter new name:", galaxy.GalaxyName);
+        galaxy.IsActive = AnsiConsole.Confirm("Should this galaxy be active?", galaxy.IsActive);
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .SpinnerStyle("green")
+            .StartAsync("Updating galaxy...", async ctx =>
             {
-                return;
-            }
+                var result = await _galaxyService.UpdateGalaxyAsync(galaxy);
 
-            AnsiConsole.MarkupLine($"[blue]Updating Galaxy ID: {galaxy.GalaxyId}[/]");
-            AnsiConsole.MarkupLine($"Current Name: [yellow]{galaxy.GalaxyName}[/]");
-            AnsiConsole.MarkupLine($"Current Status: [yellow]{(galaxy.IsActive ? "Active" : "Inactive")}[/]");
-            
-            galaxy.GalaxyName = AnsiConsole.Ask("Enter new name:", galaxy.GalaxyName);
-            galaxy.IsActive = AnsiConsole.Confirm("Should this galaxy be active?", galaxy.IsActive);
-
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Star)
-                .SpinnerStyle("green")
-                .StartAsync("Updating galaxy...", async ctx =>
+                if (result)
                 {
-                    var result = await _galaxyService.UpdateGalaxyAsync(galaxy);
-                    
-                    if (result)
+                    AnsiConsole.MarkupLine("[green]Galaxy updated successfully![/]");
+
+                    var updatedGalaxy = await _galaxyService.GetGalaxyByIdAsync(galaxy.GalaxyId);
+                    if (updatedGalaxy != null)
                     {
-                        AnsiConsole.MarkupLine("[green]Galaxy updated successfully![/]");
-                        
-                        var updatedGalaxy = await _galaxyService.GetGalaxyByIdAsync(galaxy.GalaxyId);
-                        if (updatedGalaxy != null)
-                        {
-                            DisplayGalaxyDetails(updatedGalaxy);
-                        }
+                        DisplayGalaxyDetails(updatedGalaxy);
                     }
-                });
+                }
+            });
     }
 
     private async Task ActivateGalaxyAsync()
@@ -332,7 +331,7 @@ public class GalaxyCommandHandler
             {
                 var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
                 var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
-                
+
                 if (!inactiveGalaxies.Any())
                 {
                     AnsiConsole.MarkupLine("[yellow]No inactive galaxies found.[/]");
@@ -343,42 +342,42 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-            var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-            var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
-            
-            if (!inactiveGalaxies.Any())
+        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
+
+        if (!inactiveGalaxies.Any())
+        {
+            return;
+        }
+
+        var galaxyNames = inactiveGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
+        var selectedGalaxyName = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select a galaxy to activate")
+                .PageSize(10)
+                .HighlightStyle(new Style(Color.Green))
+                .AddChoices(galaxyNames));
+
+        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .SpinnerStyle("green")
+            .StartAsync($"Activating galaxy ID {galaxyId}...", async ctx =>
             {
-                return;
-            }
+                var result = await _galaxyService.ActivateGalaxyAsync(galaxyId);
 
-            var galaxyNames = inactiveGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-            var selectedGalaxyName = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select a galaxy to activate")
-                    .PageSize(10)
-                    .HighlightStyle(new Style(Color.Green))
-                    .AddChoices(galaxyNames));
-
-            int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Star)
-                .SpinnerStyle("green")
-                .StartAsync($"Activating galaxy ID {galaxyId}...", async ctx =>
+                if (result)
                 {
-                    var result = await _galaxyService.ActivateGalaxyAsync(galaxyId);
-                    
-                    if (result)
+                    AnsiConsole.MarkupLine("[green]Galaxy activated successfully![/]");
+
+                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                    if (galaxy != null)
                     {
-                        AnsiConsole.MarkupLine("[green]Galaxy activated successfully![/]");
-                        
-                        var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                        if (galaxy != null)
-                        {
-                            DisplayGalaxyDetails(galaxy);
-                        }
+                        DisplayGalaxyDetails(galaxy);
                     }
-                });
+                }
+            });
     }
 
     private async Task DeactivateGalaxyAsync()
@@ -395,7 +394,7 @@ public class GalaxyCommandHandler
             .StartAsync("Fetching active galaxies...", async ctx =>
             {
                 var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
-                
+
                 if (!activeGalaxies.Any())
                 {
                     AnsiConsole.MarkupLine("[yellow]No active galaxies found.[/]");
@@ -406,93 +405,68 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-            var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
-            
-            if (!activeGalaxies.Any())
+        var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
+
+        if (!activeGalaxies.Any())
+        {
+            return;
+        }
+
+        var galaxyNames = activeGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
+        var selectedGalaxyName = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Select a galaxy to deactivate")
+                .PageSize(10)
+                .HighlightStyle(new Style(Color.Green))
+                .AddChoices(galaxyNames));
+
+        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Star)
+            .SpinnerStyle("green")
+            .StartAsync($"Deactivating galaxy ID {galaxyId}...", async ctx =>
             {
-                return;
-            }
+                var result = await _galaxyService.DeactivateGalaxyAsync(galaxyId);
 
-            var galaxyNames = activeGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-            var selectedGalaxyName = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select a galaxy to deactivate")
-                    .PageSize(10)
-                    .HighlightStyle(new Style(Color.Green))
-                    .AddChoices(galaxyNames));
-
-            int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Star)
-                .SpinnerStyle("green")
-                .StartAsync($"Deactivating galaxy ID {galaxyId}...", async ctx =>
+                if (result)
                 {
-                    var result = await _galaxyService.DeactivateGalaxyAsync(galaxyId);
-                    
-                    if (result)
+                    AnsiConsole.MarkupLine("[green]Galaxy deactivated successfully![/]");
+
+                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                    if (galaxy != null)
                     {
-                        AnsiConsole.MarkupLine("[green]Galaxy deactivated successfully![/]");
-                        
-                        var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                        if (galaxy != null)
-                        {
-                            DisplayGalaxyDetails(galaxy);
-                        }
+                        DisplayGalaxyDetails(galaxy);
                     }
-                });
+                }
+            });
     }
 
     private void DisplayGalaxies(IEnumerable<Galaxy> galaxies, string title)
     {
         var galaxyList = galaxies.ToList();
-        
-        if (!galaxyList.Any())
+
+        var columns = new[] { "ID", "Name", "Status" };
+
+        var rows = galaxyList.Select(g => new[]
         {
-            AnsiConsole.MarkupLine("[yellow]No galaxies found.[/]");
-            return;
-        }
+            g.GalaxyId.ToString(),
+            g.GalaxyName,
+            DisplayHelper.FormatActiveStatus(g.IsActive)
+        });
 
-        var table = new Table()
-            .Border(TableBorder.Rounded)
-            .BorderColor(Color.Green)
-            .Title($"[bold green]{title}[/]")
-            .Caption($"[grey]Total: {galaxyList.Count}[/]");
-
-        table.AddColumn(new TableColumn("[u]ID[/]").Centered());
-        table.AddColumn(new TableColumn("[u]Name[/]"));
-        table.AddColumn(new TableColumn("[u]Status[/]").Centered());
-
-        foreach (var galaxy in galaxyList)
-        {
-            table.AddRow(
-                galaxy.GalaxyId.ToString(),
-                galaxy.GalaxyName,
-                galaxy.IsActive 
-                    ? "[green]Active[/]" 
-                    : "[yellow]Inactive[/]"
-            );
-        }
-
-        AnsiConsole.Write(table);
+        DisplayHelper.DisplayTable(title, columns, rows);
     }
 
     private void DisplayGalaxyDetails(Galaxy galaxy)
     {
-        var content = new Markup(
-            $"[bold]Galaxy ID:[/] {galaxy.GalaxyId}\n" +
-            $"[bold]Name:[/] {galaxy.GalaxyName}\n" +
-            $"[bold]Status:[/] {(galaxy.IsActive ? "[green]Active[/]" : "[yellow]Inactive[/]")}"
-        );
-
-        var panel = new Panel(content)
+        var details = new Dictionary<string, string>
         {
-            Header = new PanelHeader("Galaxy Details"),
-            Border = BoxBorder.Rounded,
-            Expand = true,
-            Padding = new Padding(1, 1, 1, 1)
+            ["Galaxy ID"] = galaxy.GalaxyId.ToString(),
+            ["Name"] = galaxy.GalaxyName,
+            ["Status"] = DisplayHelper.FormatActiveStatus(galaxy.IsActive)
         };
 
-        AnsiConsole.Write(panel);
+        DisplayHelper.DisplayDetails("Galaxy Details", details);
     }
 }
