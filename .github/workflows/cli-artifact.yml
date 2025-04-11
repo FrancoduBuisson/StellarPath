@@ -1,0 +1,33 @@
+name: Build and Upload Artifact
+on:
+ push:
+   branches: [ main ]
+ pull_request:
+   branches: [ main ]
+ workflow_dispatch:
+jobs:
+ build:
+   runs-on: ubuntu-latest
+   steps:
+   - name: Checkout code
+     uses: actions/checkout@v3
+   - name: Setup .NET
+     uses: actions/setup-dotnet@v4
+     with:
+       dotnet-version: '8.0.x' 
+   - name: Restore dependencies
+     run: dotnet restore ./CLI/src/Stellarpath.CLI/Stellarpath.CLI.csproj
+   - name: Build
+     run: dotnet build ./CLI/src/Stellarpath.CLI/Stellarpath.CLI.csproj --configuration Release --no-restore
+   - name: Publish
+     run: dotnet publish ./CLI/src/Stellarpath.CLI/Stellarpath.CLI.csproj --configuration Release --output ./publish
+   - name: Zip output
+     run: zip -r release-artifact.zip ./publish
+   - name: Create GitHub Release
+     uses: softprops/action-gh-release@v2
+     with:
+       tag_name: ${{ github.ref_name }}
+       files: release-artifact.zip
+     env:
+       GITHUB_TOKEN: ${{ secrets.TOKEN }}
+   
