@@ -1,4 +1,5 @@
 ﻿using Spectre.Console;
+using Stellarpath.CLI.Commands;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
 
@@ -8,11 +9,15 @@ public class CommandProcessor
 {
     private readonly CommandContext _context;
     private readonly AuthService _authService;
+    private readonly GalaxyService _galaxyService;
+    private readonly GalaxyCommandHandler _galaxyCommandHandler;
 
     public CommandProcessor(CommandContext context, AuthService authService)
     {
         _context = context;
         _authService = authService;
+        _galaxyService = new GalaxyService(context);
+        _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
     }
 
     public async Task<bool> ProcessCommandAsync(string input)
@@ -28,6 +33,9 @@ public class CommandProcessor
                 break;
             case "logout":
                 _authService.Logout();
+                break;
+            case "galaxies":
+                await _galaxyCommandHandler.HandleAsync();
                 break;
             case "exit":
             case "quit":
