@@ -29,6 +29,16 @@ public static class HelpRenderer
         );
 
         table.AddRow(
+            "[green]starsystems[/]",
+            "Manage star systems (view, search, create, update, activate/deactivate)"
+        );
+
+        table.AddRow(
+            "[green]destinations[/]",
+            "Manage destinations (view, search, create, update, activate/deactivate)"
+        );
+
+        table.AddRow(
             "[green]logout[/]",
             "Logout of current session"
         );

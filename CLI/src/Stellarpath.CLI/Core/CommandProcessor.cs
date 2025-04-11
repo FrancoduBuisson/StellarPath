@@ -10,14 +10,25 @@ public class CommandProcessor
     private readonly CommandContext _context;
     private readonly AuthService _authService;
     private readonly GalaxyService _galaxyService;
+    private readonly StarSystemService _starSystemService;
+    private readonly DestinationService _destinationService;
+
     private readonly GalaxyCommandHandler _galaxyCommandHandler;
+    private readonly StarSystemCommandHandler _starSystemCommandHandler;
+    private readonly DestinationCommandHandler _destinationCommandHandler;
 
     public CommandProcessor(CommandContext context, AuthService authService)
     {
         _context = context;
         _authService = authService;
+
         _galaxyService = new GalaxyService(context);
+        _starSystemService = new StarSystemService(context);
+        _destinationService = new DestinationService(context);
+
         _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
+        _starSystemCommandHandler = new StarSystemCommandHandler(context, _starSystemService, _galaxyService);
+        _destinationCommandHandler = new DestinationCommandHandler(context, _destinationService, _starSystemService);
     }
 
     public async Task<bool> ProcessCommandAsync(string input)
@@ -36,6 +47,12 @@ public class CommandProcessor
                 break;
             case "galaxies":
                 await _galaxyCommandHandler.HandleAsync();
+                break;
+            case "starsystems":
+                await _starSystemCommandHandler.HandleAsync();
+                break;
+            case "destinations":
+                await _destinationCommandHandler.HandleAsync();
                 break;
             case "exit":
             case "quit":
