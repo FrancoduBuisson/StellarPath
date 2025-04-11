@@ -7,5 +7,7 @@ namespace StellarPath.API.Core.Interfaces.Repositories
         Task<IEnumerable<BookingHistory>> GetHistoryForBookingAsync(int bookingId);
         Task<BookingHistory> AddHistoryRecordAsync(BookingHistory history);
         Task<bool> UpdateHistoryRecordAsync(BookingHistory history);
+        Task<int> AddStatusChangeAsync(int bookingId, int oldStatusId, int newStatusId);
+
     }
 }

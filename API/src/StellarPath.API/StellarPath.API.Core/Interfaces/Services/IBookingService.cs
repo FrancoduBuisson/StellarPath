@@ -5,6 +5,7 @@ namespace StellarPath.API.Core.Interfaces.Services
 {
     public interface IBookingService
     {
+        Task<IEnumerable<BookingDto>> GetAllBookingsAsync();
         Task<BookingDto> CreateBookingAsync(BookingDto bookingDto);
         Task<bool> CancelBookingAsync(int bookingId);
         Task<bool> ConfirmBookingAsync(int bookingId);
