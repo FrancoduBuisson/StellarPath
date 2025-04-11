@@ -36,12 +36,24 @@ namespace API.Endpoints
             var userExists = await userService.UserExistsAsync(payload.Subject);
             if (!userExists)
             {
+                string firstName = payload.GivenName;
+                string lastName = payload.FamilyName ?? "";
+
+                if (string.IsNullOrEmpty(firstName))
+                {
+                    var userInfo = await googleAuthService.GetGoogleUserInfoAsync(request.AuthToken);
+                    if (userInfo != null)
+                    {
+                        firstName = userInfo.Given_name;
+                        lastName = userInfo.Family_name ?? "";
+                    }
+                }
 
                 await userService.CreateUserAsync(
                     payload.Subject,
                     payload.Email,
-                    payload.GivenName,
-                    payload.FamilyName ?? "");
+                    firstName,
+                    lastName);
             }
 
             var user = await userService.GetUserByGoogleIdAsync(payload.Subject);
