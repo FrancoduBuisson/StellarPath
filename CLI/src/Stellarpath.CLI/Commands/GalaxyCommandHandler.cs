@@ -90,7 +90,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching galaxies...", async ctx =>
             {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
+                var galaxies = await _galaxyService.GetAllAsync();
                 DisplayGalaxies(galaxies, "All Galaxies");
             });
     }
@@ -102,7 +102,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching active galaxies...", async ctx =>
             {
-                var galaxies = await _galaxyService.GetActiveGalaxiesAsync();
+                var galaxies = await _galaxyService.GetActiveAsync();
                 DisplayGalaxies(galaxies, "Active Galaxies");
             });
     }
@@ -114,7 +114,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching galaxies for selection...", async ctx =>
             {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
+                var galaxies = await _galaxyService.GetAllAsync();
 
                 if (!galaxies.Any())
                 {
@@ -126,7 +126,7 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        var allGalaxies = await _galaxyService.GetAllAsync();
         if (!allGalaxies.Any())
         {
             return;
@@ -147,7 +147,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
             {
-                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                var galaxy = await _galaxyService.GetByIdAsync(galaxyId);
 
                 if (galaxy != null)
                 {
@@ -212,13 +212,13 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Creating galaxy...", async ctx =>
             {
-                var result = await _galaxyService.CreateGalaxyAsync(newGalaxy);
+                var result = await _galaxyService.CreateAsync(newGalaxy);
 
                 if (result.HasValue)
                 {
                     AnsiConsole.MarkupLine($"[green]Galaxy created successfully with ID: {result.Value}[/]");
 
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(result.Value);
+                    var galaxy = await _galaxyService.GetByIdAsync(result.Value);
                     if (galaxy != null)
                     {
                         DisplayGalaxyDetails(galaxy);
@@ -240,7 +240,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching galaxies for selection...", async ctx =>
             {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
+                var galaxies = await _galaxyService.GetAllAsync();
 
                 if (!galaxies.Any())
                 {
@@ -252,7 +252,7 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        var allGalaxies = await _galaxyService.GetAllAsync();
         if (!allGalaxies.Any())
         {
             return;
@@ -273,7 +273,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
             {
-                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                var galaxy = await _galaxyService.GetByIdAsync(galaxyId);
 
                 if (galaxy == null)
                 {
@@ -283,7 +283,7 @@ public class GalaxyCommandHandler
                 ctx.Status("Update galaxy details");
             });
 
-        var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+        var galaxy = await _galaxyService.GetByIdAsync(galaxyId);
         if (galaxy == null)
         {
             return;
@@ -301,13 +301,13 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Updating galaxy...", async ctx =>
             {
-                var result = await _galaxyService.UpdateGalaxyAsync(galaxy);
+                var result = await _galaxyService.UpdateAsync(galaxy, galaxy.GalaxyId);
 
                 if (result)
                 {
                     AnsiConsole.MarkupLine("[green]Galaxy updated successfully![/]");
 
-                    var updatedGalaxy = await _galaxyService.GetGalaxyByIdAsync(galaxy.GalaxyId);
+                    var updatedGalaxy = await _galaxyService.GetByIdAsync(galaxy.GalaxyId);
                     if (updatedGalaxy != null)
                     {
                         DisplayGalaxyDetails(updatedGalaxy);
@@ -329,7 +329,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching inactive galaxies...", async ctx =>
             {
-                var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+                var allGalaxies = await _galaxyService.GetAllAsync();
                 var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
 
                 if (!inactiveGalaxies.Any())
@@ -342,7 +342,7 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
+        var allGalaxies = await _galaxyService.GetAllAsync();
         var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
 
         if (!inactiveGalaxies.Any())
@@ -365,13 +365,13 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync($"Activating galaxy ID {galaxyId}...", async ctx =>
             {
-                var result = await _galaxyService.ActivateGalaxyAsync(galaxyId);
+                var result = await _galaxyService.ActivateAsync(galaxyId);
 
                 if (result)
                 {
                     AnsiConsole.MarkupLine("[green]Galaxy activated successfully![/]");
 
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                    var galaxy = await _galaxyService.GetByIdAsync(galaxyId);
                     if (galaxy != null)
                     {
                         DisplayGalaxyDetails(galaxy);
@@ -393,7 +393,7 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync("Fetching active galaxies...", async ctx =>
             {
-                var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
+                var activeGalaxies = await _galaxyService.GetActiveAsync();
 
                 if (!activeGalaxies.Any())
                 {
@@ -405,7 +405,7 @@ public class GalaxyCommandHandler
                 ctx.Spinner(Spinner.Known.Dots);
             });
 
-        var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
+        var activeGalaxies = await _galaxyService.GetActiveAsync();
 
         if (!activeGalaxies.Any())
         {
@@ -427,13 +427,13 @@ public class GalaxyCommandHandler
             .SpinnerStyle("green")
             .StartAsync($"Deactivating galaxy ID {galaxyId}...", async ctx =>
             {
-                var result = await _galaxyService.DeactivateGalaxyAsync(galaxyId);
+                var result = await _galaxyService.DeactivateAsync(galaxyId);
 
                 if (result)
                 {
                     AnsiConsole.MarkupLine("[green]Galaxy deactivated successfully![/]");
 
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
+                    var galaxy = await _galaxyService.GetByIdAsync(galaxyId);
                     if (galaxy != null)
                     {
                         DisplayGalaxyDetails(galaxy);
