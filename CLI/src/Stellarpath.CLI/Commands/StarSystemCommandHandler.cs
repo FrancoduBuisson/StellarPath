@@ -6,54 +6,31 @@ using Stellarpath.CLI.UI;
 
 namespace Stellarpath.CLI.Commands;
 
-public class StarSystemCommandHandler
+public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
 {
-    private readonly CommandContext _context;
     private readonly StarSystemService _starSystemService;
     private readonly GalaxyService _galaxyService;
 
     public StarSystemCommandHandler(CommandContext context, StarSystemService starSystemService, GalaxyService galaxyService)
+        : base(context)
     {
-        _context = context;
         _starSystemService = starSystemService;
         _galaxyService = galaxyService;
     }
 
-    public async Task HandleAsync()
+    protected override string GetMenuTitle() => "Star System Management";
+    protected override string GetEntityName() => "Star System";
+    protected override string GetEntityNamePlural() => "Star Systems";
+
+    protected override List<string> GetEntitySpecificOptions()
     {
-        var options = new List<string>
+        return new List<string>
         {
-            "List All Star Systems",
-            "List Active Star Systems",
-            "View Star System Details",
-            "Search Star Systems",
             "View Star Systems by Galaxy"
         };
-
-        if (_context.CurrentUser?.Role == "Admin")
-        {
-            options.AddRange(new[]
-            {
-                "Create New Star System",
-                "Update Star System",
-                "Activate Star System",
-                "Deactivate Star System"
-            });
-        }
-
-        options.Add("Back to Main Menu");
-
-        var selection = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Star System Management")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(options));
-
-        await ProcessSelectionAsync(selection);
     }
 
-    private async Task ProcessSelectionAsync(string selection)
+    protected override async Task ProcessSelectionAsync(string selection)
     {
         switch (selection)
         {
@@ -91,283 +68,208 @@ public class StarSystemCommandHandler
 
     private async Task ListAllStarSystemsAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching star systems...", async ctx =>
-            {
-                var starSystems = await _starSystemService.GetAllAsync();
-                DisplayStarSystems(starSystems, "All Star Systems");
-            });
+        await ExecuteWithSpinnerAsync("Fetching star systems...", async ctx =>
+        {
+            var starSystems = await _starSystemService.GetAllAsync();
+            DisplayEntities(starSystems, "All Star Systems");
+            return true;
+        });
     }
 
     private async Task ListActiveStarSystemsAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching active star systems...", async ctx =>
-            {
-                var starSystems = await _starSystemService.GetActiveAsync();
-                DisplayStarSystems(starSystems, "Active Star Systems");
-            });
+        await ExecuteWithSpinnerAsync("Fetching active star systems...", async ctx =>
+        {
+            var starSystems = await _starSystemService.GetActiveAsync();
+            DisplayEntities(starSystems, "Active Star Systems");
+            return true;
+        });
     }
 
     private async Task ViewStarSystemDetailsAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching star systems for selection...", async ctx =>
-            {
-                var starSystems = await _starSystemService.GetAllAsync();
+        var starSystem = await FetchAndPromptForEntitySelectionAsync(
+            _starSystemService,
+            service => service.GetAllAsync(),
+            s => s.SystemName,
+            s => s.SystemId,
+            "Fetching star systems for selection...",
+            "No star systems found.",
+            "Select a star system to view details");
 
-                if (!starSystems.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No star systems found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a star system to view details");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allStarSystems = await _starSystemService.GetAllAsync();
-        if (!allStarSystems.Any())
+        if (starSystem != null)
         {
-            return;
-        }
-
-        var starSystemNames = allStarSystems.Select(s => $"{s.SystemId}: {s.SystemName}").ToList();
-        var selectedStarSystemName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a star system to view details")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(starSystemNames));
-
-        int systemId = int.Parse(selectedStarSystemName.Split(':')[0].Trim());
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Fetching details for star system ID {systemId}...", async ctx =>
+            await ExecuteWithSpinnerAsync($"Fetching details for star system ID {starSystem.SystemId}...", async ctx =>
             {
-                var starSystem = await _starSystemService.GetByIdAsync(systemId);
-
-                if (starSystem != null)
+                var fetchedStarSystem = await _starSystemService.GetByIdAsync(starSystem.SystemId);
+                if (fetchedStarSystem != null)
                 {
-                    DisplayStarSystemDetails(starSystem);
+                    DisplayEntityDetails(fetchedStarSystem);
                 }
+                return true;
             });
+        }
     }
 
     private async Task SearchStarSystemsAsync()
     {
         var searchCriteria = new StarSystemSearchCriteria();
 
-        var includeName = AnsiConsole.Confirm("Do you want to search by name?", false);
-        if (includeName)
-        {
-            searchCriteria.Name = AnsiConsole.Ask<string>("Enter star system name (or part of name):");
-        }
+        InputHelper.CollectSearchCriteria<StarSystemSearchCriteria>(
+            "name",
+            criteria => criteria.Name = InputHelper.AskForString("Enter star system name (or part of name):"),
+            searchCriteria);
 
-        var includeGalaxy = AnsiConsole.Confirm("Do you want to filter by galaxy?", false);
+        var includeGalaxy = InputHelper.AskForConfirmation("Do you want to filter by galaxy?", false);
         if (includeGalaxy)
         {
-            var byGalaxyId = AnsiConsole.Confirm("Search by galaxy ID? (No = search by galaxy name)", false);
+            var byGalaxyId = InputHelper.AskForConfirmation("Search by galaxy ID? (No = search by galaxy name)", false);
             if (byGalaxyId)
             {
-                searchCriteria.GalaxyId = AnsiConsole.Ask<int>("Enter galaxy ID:");
+                searchCriteria.GalaxyId = InputHelper.AskForInt("Enter galaxy ID:");
             }
             else
             {
-                searchCriteria.GalaxyName = AnsiConsole.Ask<string>("Enter galaxy name (or part of name):");
+                searchCriteria.GalaxyName = InputHelper.AskForString("Enter galaxy name (or part of name):");
             }
         }
 
-        var includeStatus = AnsiConsole.Confirm("Do you want to filter by active status?", false);
-        if (includeStatus)
+        InputHelper.CollectSearchCriteria<StarSystemSearchCriteria>(
+            "active status",
+            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active star systems?"),
+            searchCriteria);
+
+        await ExecuteWithSpinnerAsync("Searching star systems...", async ctx =>
         {
-            searchCriteria.IsActive = AnsiConsole.Confirm("Show only active star systems?");
-        }
+            var starSystems = await _starSystemService.SearchStarSystemsAsync(searchCriteria);
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Searching star systems...", async ctx =>
+            string title = "Search Results for Star Systems";
+            if (!string.IsNullOrEmpty(searchCriteria.Name))
             {
-                var starSystems = await _starSystemService.SearchStarSystemsAsync(searchCriteria);
+                title += $" containing '{searchCriteria.Name}'";
+            }
+            if (searchCriteria.GalaxyId.HasValue)
+            {
+                title += $" in galaxy ID {searchCriteria.GalaxyId.Value}";
+            }
+            if (!string.IsNullOrEmpty(searchCriteria.GalaxyName))
+            {
+                title += $" in galaxy '{searchCriteria.GalaxyName}'";
+            }
+            if (searchCriteria.IsActive.HasValue)
+            {
+                title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
+            }
 
-                string title = "Search Results for Star Systems";
-                if (!string.IsNullOrEmpty(searchCriteria.Name))
-                {
-                    title += $" containing '{searchCriteria.Name}'";
-                }
-                if (searchCriteria.GalaxyId.HasValue)
-                {
-                    title += $" in galaxy ID {searchCriteria.GalaxyId.Value}";
-                }
-                if (!string.IsNullOrEmpty(searchCriteria.GalaxyName))
-                {
-                    title += $" in galaxy '{searchCriteria.GalaxyName}'";
-                }
-                if (searchCriteria.IsActive.HasValue)
-                {
-                    title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-                }
-
-                DisplayStarSystems(starSystems, title);
-            });
+            DisplayEntities(starSystems, title);
+            return true;
+        });
     }
 
     private async Task ViewStarSystemsByGalaxyAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching galaxies for selection...", async ctx =>
-            {
-                var galaxies = await _galaxyService.GetAllAsync();
+        var galaxy = await FetchAndPromptForEntitySelectionAsync(
+            _galaxyService,
+            service => service.GetAllAsync(),
+            g => g.GalaxyName,
+            g => g.GalaxyId,
+            "Fetching galaxies for selection...",
+            "No galaxies found.",
+            "Select a galaxy to view its star systems");
 
-                if (!galaxies.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No galaxies found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a galaxy to view its star systems");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var galaxies = await _galaxyService.GetAllAsync();
-        if (!galaxies.Any())
+        if (galaxy == null)
         {
             return;
         }
 
-        var galaxyNames = galaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a galaxy to view its star systems")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
-
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Fetching star systems for galaxy ID {galaxyId}...", async ctx =>
-            {
-                var starSystems = await _starSystemService.GetStarSystemsByGalaxyIdAsync(galaxyId);
-
-                var galaxyName = galaxies.FirstOrDefault(g => g.GalaxyId == galaxyId)?.GalaxyName ?? $"ID: {galaxyId}";
-                DisplayStarSystems(starSystems, $"Star Systems in Galaxy: {galaxyName}");
-            });
+        await ExecuteWithSpinnerAsync($"Fetching star systems for galaxy ID {galaxy.GalaxyId}...", async ctx =>
+        {
+            var starSystems = await _starSystemService.GetStarSystemsByGalaxyIdAsync(galaxy.GalaxyId);
+            DisplayEntities(starSystems, $"Star Systems in Galaxy: {galaxy.GalaxyName}");
+            return true;
+        });
     }
 
     private async Task CreateStarSystemAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to create star systems.[/]");
             return;
         }
 
-        var galaxies = await _galaxyService.GetActiveAsync();
+        // First get active galaxies for selection
+        var galaxies = await ExecuteWithSpinnerAsync(
+            "Fetching active galaxies for selection...",
+            async ctx => await _galaxyService.GetActiveAsync());
+
         if (!galaxies.Any())
         {
             AnsiConsole.MarkupLine("[yellow]No active galaxies found. Please create a galaxy first.[/]");
             return;
         }
 
-        var galaxyNames = galaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select the galaxy for this star system")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
+        var selectedGalaxy = SelectionHelper.SelectFromListById(
+            galaxies,
+            g => g.GalaxyId,
+            g => g.GalaxyName,
+            "Select the galaxy for this star system");
 
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+        if (selectedGalaxy == null)
+        {
+            return;
+        }
 
         var newStarSystem = new StarSystem
         {
-            SystemName = AnsiConsole.Ask<string>("Enter star system name:"),
-            GalaxyId = galaxyId,
-            IsActive = AnsiConsole.Confirm("Should this star system be active?", true)
+            SystemName = InputHelper.AskForString("Enter star system name:"),
+            GalaxyId = selectedGalaxy.GalaxyId,
+            IsActive = InputHelper.AskForConfirmation("Should this star system be active?", true)
         };
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Creating star system...", async ctx =>
+        await ExecuteWithSpinnerAsync("Creating star system...", async ctx =>
+        {
+            var result = await _starSystemService.CreateAsync(newStarSystem);
+
+            if (result.HasValue)
             {
-                var result = await _starSystemService.CreateAsync(newStarSystem);
+                AnsiConsole.MarkupLine($"[green]Star system created successfully with ID: {result.Value}[/]");
 
-                if (result.HasValue)
+                var starSystem = await _starSystemService.GetByIdAsync(result.Value);
+                if (starSystem != null)
                 {
-                    AnsiConsole.MarkupLine($"[green]Star system created successfully with ID: {result.Value}[/]");
-
-                    var starSystem = await _starSystemService.GetByIdAsync(result.Value);
-                    if (starSystem != null)
-                    {
-                        DisplayStarSystemDetails(starSystem);
-                    }
+                    DisplayEntityDetails(starSystem);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task UpdateStarSystemAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
-        {
-            AnsiConsole.MarkupLine("[red]You don't have permission to update star systems.[/]");
-            return;
-        }
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching star systems for selection...", async ctx =>
-            {
-                var starSystems = await _starSystemService.GetAllAsync();
-
-                if (!starSystems.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No star systems found to update.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a star system to update");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allStarSystems = await _starSystemService.GetAllAsync();
-        if (!allStarSystems.Any())
+        if (!EnsureAdminPermission())
         {
             return;
         }
 
-        var starSystemNames = allStarSystems.Select(s => $"{s.SystemId}: {s.SystemName}").ToList();
-        var selectedStarSystemName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a star system to update")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(starSystemNames));
+        var starSystem = await FetchAndPromptForEntitySelectionAsync(
+            _starSystemService,
+            service => service.GetAllAsync(),
+            s => s.SystemName,
+            s => s.SystemId,
+            "Fetching star systems for selection...",
+            "No star systems found to update.",
+            "Select a star system to update");
 
-        int systemId = int.Parse(selectedStarSystemName.Split(':')[0].Trim());
-
-        var starSystem = await _starSystemService.GetByIdAsync(systemId);
         if (starSystem == null)
         {
             return;
         }
 
-        var galaxies = await _galaxyService.GetAllAsync();
+        // Also fetch available galaxies
+        var galaxies = await ExecuteWithSpinnerAsync(
+            "Fetching galaxies...",
+            async ctx => await _galaxyService.GetAllAsync());
+
         if (!galaxies.Any())
         {
             AnsiConsole.MarkupLine("[yellow]No galaxies found. Cannot update galaxy reference.[/]");
@@ -379,171 +281,138 @@ public class StarSystemCommandHandler
         AnsiConsole.MarkupLine($"Current Galaxy: [yellow]{starSystem.GalaxyName} (ID: {starSystem.GalaxyId})[/]");
         AnsiConsole.MarkupLine($"Current Status: [yellow]{(starSystem.IsActive ? "Active" : "Inactive")}[/]");
 
-        starSystem.SystemName = AnsiConsole.Ask("Enter new name:", starSystem.SystemName);
+        starSystem.SystemName = InputHelper.AskForString("Enter new name:", starSystem.SystemName);
 
-        var changeGalaxy = AnsiConsole.Confirm("Do you want to change the galaxy?", false);
+        var changeGalaxy = InputHelper.AskForConfirmation("Do you want to change the galaxy?", false);
         if (changeGalaxy)
         {
-            var galaxyNames = galaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-            var selectedGalaxyName = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Select the new galaxy for this star system")
-                    .PageSize(10)
-                    .HighlightStyle(new Style(Color.Green))
-                    .AddChoices(galaxyNames));
+            var selectedGalaxy = SelectionHelper.SelectFromListById(
+                galaxies,
+                g => g.GalaxyId,
+                g => g.GalaxyName,
+                "Select the new galaxy for this star system");
 
-            starSystem.GalaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+            if (selectedGalaxy != null)
+            {
+                starSystem.GalaxyId = selectedGalaxy.GalaxyId;
+            }
         }
 
-        starSystem.IsActive = AnsiConsole.Confirm("Should this star system be active?", starSystem.IsActive);
+        starSystem.IsActive = InputHelper.AskForConfirmation("Should this star system be active?", starSystem.IsActive);
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Updating star system...", async ctx =>
+        await ExecuteWithSpinnerAsync("Updating star system...", async ctx =>
+        {
+            var result = await _starSystemService.UpdateAsync(starSystem, starSystem.SystemId);
+
+            if (result)
             {
-                var result = await _starSystemService.UpdateAsync(starSystem, starSystem.SystemId);
+                AnsiConsole.MarkupLine("[green]Star system updated successfully![/]");
 
-                if (result)
+                var updatedStarSystem = await _starSystemService.GetByIdAsync(starSystem.SystemId);
+                if (updatedStarSystem != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Star system updated successfully![/]");
-
-                    var updatedStarSystem = await _starSystemService.GetByIdAsync(starSystem.SystemId);
-                    if (updatedStarSystem != null)
-                    {
-                        DisplayStarSystemDetails(updatedStarSystem);
-                    }
+                    DisplayEntityDetails(updatedStarSystem);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task ActivateStarSystemAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to activate star systems.[/]");
             return;
         }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching inactive star systems...", async ctx =>
-            {
-                var allStarSystems = await _starSystemService.GetAllAsync();
-                var inactiveStarSystems = allStarSystems.Where(s => !s.IsActive).ToList();
+        var allStarSystems = await ExecuteWithSpinnerAsync(
+            "Fetching inactive star systems...",
+            async ctx => await _starSystemService.GetAllAsync());
 
-                if (!inactiveStarSystems.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No inactive star systems found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a star system to activate");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allStarSystems = await _starSystemService.GetAllAsync();
         var inactiveStarSystems = allStarSystems.Where(s => !s.IsActive).ToList();
 
         if (!inactiveStarSystems.Any())
         {
+            AnsiConsole.MarkupLine("[yellow]No inactive star systems found.[/]");
             return;
         }
 
-        var starSystemNames = inactiveStarSystems.Select(s => $"{s.SystemId}: {s.SystemName}").ToList();
-        var selectedStarSystemName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a star system to activate")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(starSystemNames));
+        var selectedStarSystem = SelectionHelper.SelectFromListById(
+            inactiveStarSystems,
+            s => s.SystemId,
+            s => s.SystemName,
+            "Select a star system to activate");
 
-        int systemId = int.Parse(selectedStarSystemName.Split(':')[0].Trim());
+        if (selectedStarSystem == null)
+        {
+            return;
+        }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Activating star system ID {systemId}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Activating star system ID {selectedStarSystem.SystemId}...", async ctx =>
+        {
+            var result = await _starSystemService.ActivateAsync(selectedStarSystem.SystemId);
+
+            if (result)
             {
-                var result = await _starSystemService.ActivateAsync(systemId);
+                AnsiConsole.MarkupLine("[green]Star system activated successfully![/]");
 
-                if (result)
+                var starSystem = await _starSystemService.GetByIdAsync(selectedStarSystem.SystemId);
+                if (starSystem != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Star system activated successfully![/]");
-
-                    var starSystem = await _starSystemService.GetByIdAsync(systemId);
-                    if (starSystem != null)
-                    {
-                        DisplayStarSystemDetails(starSystem);
-                    }
+                    DisplayEntityDetails(starSystem);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task DeactivateStarSystemAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to deactivate star systems.[/]");
             return;
         }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching active star systems...", async ctx =>
-            {
-                var activeStarSystems = await _starSystemService.GetActiveAsync();
-
-                if (!activeStarSystems.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No active star systems found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a star system to deactivate");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var activeStarSystems = await _starSystemService.GetActiveAsync();
+        var activeStarSystems = await ExecuteWithSpinnerAsync(
+            "Fetching active star systems...",
+            async ctx => await _starSystemService.GetActiveAsync());
 
         if (!activeStarSystems.Any())
         {
+            AnsiConsole.MarkupLine("[yellow]No active star systems found.[/]");
             return;
         }
 
-        var starSystemNames = activeStarSystems.Select(s => $"{s.SystemId}: {s.SystemName}").ToList();
-        var selectedStarSystemName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a star system to deactivate")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(starSystemNames));
+        var selectedStarSystem = SelectionHelper.SelectFromListById(
+            activeStarSystems,
+            s => s.SystemId,
+            s => s.SystemName,
+            "Select a star system to deactivate");
 
-        int systemId = int.Parse(selectedStarSystemName.Split(':')[0].Trim());
+        if (selectedStarSystem == null)
+        {
+            return;
+        }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Deactivating star system ID {systemId}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Deactivating star system ID {selectedStarSystem.SystemId}...", async ctx =>
+        {
+            var result = await _starSystemService.DeactivateAsync(selectedStarSystem.SystemId);
+
+            if (result)
             {
-                var result = await _starSystemService.DeactivateAsync(systemId);
+                AnsiConsole.MarkupLine("[green]Star system deactivated successfully![/]");
 
-                if (result)
+                var starSystem = await _starSystemService.GetByIdAsync(selectedStarSystem.SystemId);
+                if (starSystem != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Star system deactivated successfully![/]");
-
-                    var starSystem = await _starSystemService.GetByIdAsync(systemId);
-                    if (starSystem != null)
-                    {
-                        DisplayStarSystemDetails(starSystem);
-                    }
+                    DisplayEntityDetails(starSystem);
                 }
-            });
+            }
+            return true;
+        });
     }
 
-    private void DisplayStarSystems(IEnumerable<StarSystem> starSystems, string title)
+    protected override void DisplayEntities(IEnumerable<StarSystem> starSystems, string title)
     {
         var starSystemList = starSystems.ToList();
 
@@ -560,7 +429,7 @@ public class StarSystemCommandHandler
         DisplayHelper.DisplayTable(title, columns, rows);
     }
 
-    private void DisplayStarSystemDetails(StarSystem starSystem)
+    protected override void DisplayEntityDetails(StarSystem starSystem)
     {
         var details = new Dictionary<string, string>
         {
