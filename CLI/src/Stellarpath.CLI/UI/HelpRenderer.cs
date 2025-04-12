@@ -49,6 +49,11 @@ public static class HelpRenderer
         );
 
         table.AddRow(
+            "[green]cruises[/]",
+            "Manage cruises (view, search, create, cancel, filter by various criteria)"
+        );
+
+        table.AddRow(
             "[green]users[/]",
             "Manage users (view, search, activate/deactivate, update roles)"
         );

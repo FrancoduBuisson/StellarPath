@@ -9,7 +9,7 @@ public interface ISpaceshipService
     Task<IEnumerable<SpaceshipDto>> GetSpaceshipsByModelIdAsync(int modelId);
     Task<int> CreateSpaceshipAsync(SpaceshipDto spaceshipDto);
     Task<bool> UpdateSpaceshipAsync(SpaceshipDto spaceshipDto);
-    Task<bool> DeactivateSpaceshipAsync(int id);
+    Task<(bool success, int cancelledCruises)> DeactivateSpaceshipAsync(int id, bool cancelCruises = false);
     Task<bool> ActivateSpaceshipAsync(int id);
     Task<bool> DeleteSpaceshipAsync(int id);
     Task<IEnumerable<SpaceshipDto>> SearchSpaceshipsAsync(

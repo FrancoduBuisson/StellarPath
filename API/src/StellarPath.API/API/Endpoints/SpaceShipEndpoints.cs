@@ -152,28 +152,39 @@ public static class SpaceshipEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> DeleteSpaceship(int id, ISpaceshipService spaceshipService)
+    private static async Task<IResult> DeactivateSpaceship(
+    int id,
+    [FromQuery] bool cancelCruises,
+    ISpaceshipService spaceshipService)
     {
-        var spaceship = await spaceshipService.GetSpaceshipByIdAsync(id);
-        if (spaceship == null)
+        try
         {
-            return Results.NotFound();
+            var spaceship = await spaceshipService.GetSpaceshipByIdAsync(id);
+            if (spaceship == null)
+            {
+                return Results.NotFound();
+            }
+
+            var (success, cancelledCruises) = await spaceshipService.DeactivateSpaceshipAsync(id, cancelCruises);
+
+            if (success)
+            {
+                if (cancelCruises && cancelledCruises > 0)
+                {
+                    return Results.Ok(new
+                    {
+                        message = "Spaceship deactivated successfully",
+                        cancelledCruises = cancelledCruises
+                    });
+                }
+                return Results.NoContent();
+            }
+            return Results.BadRequest("Failed to deactivate spaceship");
         }
-
-        await spaceshipService.DeleteSpaceshipAsync(id);
-        return Results.NoContent();
-    }
-
-    private static async Task<IResult> DeactivateSpaceship(int id, ISpaceshipService spaceshipService)
-    {
-        var spaceship = await spaceshipService.GetSpaceshipByIdAsync(id);
-        if (spaceship == null)
+        catch (Exception ex)
         {
-            return Results.NotFound();
+            return Results.BadRequest(ex.Message);
         }
-
-        await spaceshipService.DeactivateSpaceshipAsync(id);
-        return Results.NoContent();
     }
 
     private static async Task<IResult> ActivateSpaceship(int id, ISpaceshipService spaceshipService)

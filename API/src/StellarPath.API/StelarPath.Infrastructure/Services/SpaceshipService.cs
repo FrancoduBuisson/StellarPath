@@ -12,6 +12,7 @@ public class SpaceshipService(
     IShipModelRepository shipModelRepository,
     ICruiseStatusService cruiseStatusService,
     ICruiseRepository cruiseRepository,
+    ICruiseService cruiseService,
     IUnitOfWork unitOfWork) : ISpaceshipService
 {
     public async Task<int> CreateSpaceshipAsync(SpaceshipDto spaceshipDto)
@@ -53,24 +54,30 @@ public class SpaceshipService(
         }
     }
 
-    public async Task<bool> DeactivateSpaceshipAsync(int id)
+    public async Task<(bool success, int cancelledCruises)> DeactivateSpaceshipAsync(int id, bool cancelCruises = false)
     {
         try
         {
             var spaceship = await spaceshipRepository.GetByIdAsync(id);
             if (spaceship == null)
             {
-                return false;
+                return (false, 0);
             }
 
             unitOfWork.BeginTransaction();
 
             spaceship.IsActive = false;
-            var result = await spaceshipRepository.UpdateAsync(spaceship);
+            var success = await spaceshipRepository.UpdateAsync(spaceship);
+
+            int cancelledCruisesCount = 0;
+            if (success && cancelCruises)
+            {
+                
+                cancelledCruisesCount = await cruiseService.CancelCruisesBySpaceshipIdAsync(id);
+            }
 
             unitOfWork.Commit();
-
-            return result;
+            return (success, cancelledCruisesCount);
         }
         catch
         {

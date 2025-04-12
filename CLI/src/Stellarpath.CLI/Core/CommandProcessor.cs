@@ -15,6 +15,7 @@ public class CommandProcessor
     private readonly DestinationService _destinationService;
     private readonly ShipModelService _shipModelService;
     private readonly SpaceshipService _spaceshipService;
+    private readonly CruiseService _cruiseService;
     private readonly UserService _userService;
 
     private readonly GalaxyCommandHandler _galaxyCommandHandler;
@@ -22,6 +23,7 @@ public class CommandProcessor
     private readonly DestinationCommandHandler _destinationCommandHandler;
     private readonly ShipModelCommandHandler _shipModelCommandHandler;
     private readonly SpaceshipCommandHandler _spaceshipCommandHandler;
+    private readonly CruiseCommandHandler _cruiseCommandHandler;
     private readonly UserCommandHandler _userCommandHandler;
 
     public CommandProcessor(CommandContext context, AuthService authService)
@@ -34,6 +36,7 @@ public class CommandProcessor
         _destinationService = new DestinationService(context);
         _shipModelService = new ShipModelService(context);
         _spaceshipService = new SpaceshipService(context);
+        _cruiseService = new CruiseService(context);
         _userService = new UserService(context);
 
         _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
@@ -41,6 +44,7 @@ public class CommandProcessor
         _destinationCommandHandler = new DestinationCommandHandler(context, _destinationService, _starSystemService);
         _shipModelCommandHandler = new ShipModelCommandHandler(context, _shipModelService);
         _spaceshipCommandHandler = new SpaceshipCommandHandler(context, _spaceshipService, _shipModelService);
+        _cruiseCommandHandler = new CruiseCommandHandler(context, _cruiseService, _spaceshipService, _destinationService);
         _userCommandHandler = new UserCommandHandler(context, _userService);
     }
 
@@ -72,6 +76,9 @@ public class CommandProcessor
                 break;
             case "spaceships":
                 await _spaceshipCommandHandler.HandleAsync();
+                break;
+            case "cruises":
+                await _cruiseCommandHandler.HandleAsync();
                 break;
             case "users":
                 await _userCommandHandler.HandleAsync();
