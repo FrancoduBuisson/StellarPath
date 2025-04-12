@@ -19,28 +19,50 @@ resource "aws_ecs_task_definition" "api" {
   container_definitions = jsonencode([
     {
       name  = var.app_name
-      image = "${aws_ecr_repository.api.repository_url}:latest",
+      image = "${aws_ecr_repository.api.repository_url}:latest"
       portMappings = [
         {
           containerPort = 80,
           hostPort      = 80,
           protocol      = "tcp"
         }
-      ],
+      ]
       environment = [
         {
           name  = "ASPNETCORE_URLS",
           value = "http://+:80"
         },
         {
-          name  = "ConnectionStrings__DefaultConnection",
-          value = "Host=${aws_db_instance.postgres.address};Port=5432;Database=${var.db_name};Username=${var.db_username};Password=${var.db_password}"
-        },
-        {
           name  = "ASPNETCORE_ENVIRONMENT",
           value = "Development"
+        },
+        {
+          name  = "Jwt_ExpiryHours",
+          value = "1"
+        },
+        {
+          name  = "Jwt_Issuer",
+          value = "StellarPathAPI"
+        },
+        {
+          name  = "Jwt_Audience",
+          value = "StellarPathUser"
         }
-      ],
+      ]
+      secrets = [
+        {
+          name      = "GoogleAuth_ClientId"
+          valueFrom = aws_ssm_parameter.google_client_id.arn
+        },
+        {
+          name      = "Jwt_SecretKey"
+          valueFrom = aws_secretsmanager_secret.jwt_secret.arn
+        },
+        {
+          name      = "ConnectionStrings__DefaultConnection"
+          valueFrom = aws_secretsmanager_secret.db_connection.arn
+        },
+      ]
       logConfiguration = {
         logDriver = "awslogs",
         options = {
@@ -48,7 +70,7 @@ resource "aws_ecs_task_definition" "api" {
           "awslogs-region"        = var.region,
           "awslogs-stream-prefix" = "ecs"
         }
-      },
+      }
       essential = true
     }
   ])
