@@ -49,6 +49,11 @@ public static class HelpRenderer
         );
 
         table.AddRow(
+            "[green]users[/]",
+            "Manage users (view, search, activate/deactivate, update roles)"
+        );
+
+        table.AddRow(
             "[green]logout[/]",
             "Logout of current session"
         );

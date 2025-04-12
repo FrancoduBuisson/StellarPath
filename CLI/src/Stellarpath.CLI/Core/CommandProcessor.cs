@@ -15,12 +15,14 @@ public class CommandProcessor
     private readonly DestinationService _destinationService;
     private readonly ShipModelService _shipModelService;
     private readonly SpaceshipService _spaceshipService;
+    private readonly UserService _userService;
 
     private readonly GalaxyCommandHandler _galaxyCommandHandler;
     private readonly StarSystemCommandHandler _starSystemCommandHandler;
     private readonly DestinationCommandHandler _destinationCommandHandler;
     private readonly ShipModelCommandHandler _shipModelCommandHandler;
     private readonly SpaceshipCommandHandler _spaceshipCommandHandler;
+    private readonly UserCommandHandler _userCommandHandler;
 
     public CommandProcessor(CommandContext context, AuthService authService)
     {
@@ -32,12 +34,14 @@ public class CommandProcessor
         _destinationService = new DestinationService(context);
         _shipModelService = new ShipModelService(context);
         _spaceshipService = new SpaceshipService(context);
+        _userService = new UserService(context);
 
         _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
         _starSystemCommandHandler = new StarSystemCommandHandler(context, _starSystemService, _galaxyService);
         _destinationCommandHandler = new DestinationCommandHandler(context, _destinationService, _starSystemService);
         _shipModelCommandHandler = new ShipModelCommandHandler(context, _shipModelService);
         _spaceshipCommandHandler = new SpaceshipCommandHandler(context, _spaceshipService, _shipModelService);
+        _userCommandHandler = new UserCommandHandler(context, _userService);
     }
 
     public async Task<bool> ProcessCommandAsync(string input)
@@ -68,6 +72,9 @@ public class CommandProcessor
                 break;
             case "spaceships":
                 await _spaceshipCommandHandler.HandleAsync();
+                break;
+            case "users":
+                await _userCommandHandler.HandleAsync();
                 break;
             case "exit":
             case "quit":
