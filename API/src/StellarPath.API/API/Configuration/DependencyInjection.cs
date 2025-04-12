@@ -99,14 +99,15 @@ public static class DependencyInjection
 
     public static void RegisterServices(IServiceCollection services)
     {
+        services.AddScoped<ICruiseStatusService, CruiseStatusService>();
+
         services.AddScoped<IGalaxyService, GalaxyService>();
-        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IStarSystemService, StarSystemService>();
         services.AddScoped<IDestinationService, DestinationService>();
         services.AddScoped<IShipModelService, ShipModelService>();
         services.AddScoped<ISpaceshipService, SpaceshipService>();
         services.AddScoped<ICruiseService, CruiseService>();
-        services.AddScoped<ICruiseStatusService, CruiseStatusService>();
+        services.AddScoped<IUserService, UserService>();
     }
 
 }

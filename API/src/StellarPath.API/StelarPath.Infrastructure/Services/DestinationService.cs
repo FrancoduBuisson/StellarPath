@@ -6,7 +6,7 @@ using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Models;
 
 namespace StelarPath.API.Infrastructure.Services;
-public class DestinationService(IDestinationRepository destinationRepository, IStarSystemRepository starSystemRepository, IUnitOfWork unitOfWork) : IDestinationService
+public class DestinationService(IDestinationRepository destinationRepository, ICruiseStatusService cruiseStatusService, ICruiseRepository cruiseRepository, IStarSystemRepository starSystemRepository, IUnitOfWork unitOfWork) : IDestinationService
 {
     public async Task<int> CreateDestinationAsync(DestinationDto destinationDto)
     {
@@ -36,6 +36,24 @@ public class DestinationService(IDestinationRepository destinationRepository, IS
             }
 
             unitOfWork.BeginTransaction();
+
+            var departureDestinationCruises = await cruiseRepository.GetCruisesByDepartureDestinationAsync(id);
+            var arrivalDestinationCruises = await cruiseRepository.GetCruisesByArrivalDestinationAsync(id);
+
+            var scheduledStatusId = await cruiseStatusService.GetScheduledStatusIdAsync();
+
+            var affectedCruises = departureDestinationCruises
+                .Concat(arrivalDestinationCruises)
+                .Where(c => c.CruiseStatusId == scheduledStatusId)
+                .DistinctBy(c => c.CruiseId)
+                .ToList();
+
+            var cancelledStatusId = await cruiseStatusService.GetCancelledStatusIdAsync();
+
+            foreach (var cruise in affectedCruises)
+            {
+                await cruiseRepository.UpdateCruiseStatusAsync(cruise.CruiseId, cancelledStatusId);
+            }
 
             destination.IsActive = false;
             var result = await destinationRepository.UpdateAsync(destination);
