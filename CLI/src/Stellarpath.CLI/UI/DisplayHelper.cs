@@ -79,6 +79,6 @@ public static class DisplayHelper
 
     public static string FormatPrice(decimal price)
     {
-        return $"${price:N2}";
+        return $"{price:C2}";
     }
 }

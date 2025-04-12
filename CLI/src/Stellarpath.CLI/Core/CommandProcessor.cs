@@ -48,46 +48,65 @@ public class CommandProcessor
         _userCommandHandler = new UserCommandHandler(context, _userService);
     }
 
+    public Dictionary<string, CommandCategory> GetCommandCategories()
+    {
+        bool isAdmin = _context.CurrentUser?.Role == "Admin";
+        return CommandMenuStructure.GetCommandCategories(isAdmin);
+    }
+
+    public Dictionary<string, string> GetCommandDescriptions()
+    {
+        bool isAdmin = _context.CurrentUser?.Role == "Admin";
+        return CommandMenuStructure.GetCommandDescriptions(isAdmin);
+    }
+
+    public Dictionary<string, string> GetCategoryDescriptions()
+    {
+        return CommandMenuStructure.GetCategoryDescriptions();
+    }
+
     public async Task<bool> ProcessCommandAsync(string input)
     {
+        if (string.IsNullOrEmpty(input))
+            return false;
+
         string command = input.Trim().ToLower();
         switch (command)
         {
-            case "help":
+            case CommandMenuStructure.CMD_HELP:
                 HelpRenderer.ShowHelp();
                 break;
-            case "whoami":
+            case CommandMenuStructure.CMD_WHOAMI:
                 UiHelper.ShowUserInfo(_context.CurrentUser);
                 break;
-            case "logout":
+            case CommandMenuStructure.CMD_LOGOUT:
                 _authService.Logout();
                 break;
-            case "galaxies":
+            case CommandMenuStructure.CMD_GALAXIES:
                 await _galaxyCommandHandler.HandleAsync();
                 break;
-            case "starsystems":
+            case CommandMenuStructure.CMD_STARSYSTEMS:
                 await _starSystemCommandHandler.HandleAsync();
                 break;
-            case "destinations":
+            case CommandMenuStructure.CMD_DESTINATIONS:
                 await _destinationCommandHandler.HandleAsync();
                 break;
-            case "shipmodels":
+            case CommandMenuStructure.CMD_SHIPMODELS:
                 await _shipModelCommandHandler.HandleAsync();
                 break;
-            case "spaceships":
+            case CommandMenuStructure.CMD_SPACESHIPS:
                 await _spaceshipCommandHandler.HandleAsync();
                 break;
-            case "cruises":
+            case CommandMenuStructure.CMD_CRUISES:
                 await _cruiseCommandHandler.HandleAsync();
                 break;
-            case "users":
+            case CommandMenuStructure.CMD_USERS:
                 await _userCommandHandler.HandleAsync();
                 break;
-            case "exit":
-            case "quit":
+            case CommandMenuStructure.CMD_EXIT:
                 return true;
             default:
-                AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}. Type 'help' for options.[/]");
+                AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}.[/]");
                 break;
         }
 

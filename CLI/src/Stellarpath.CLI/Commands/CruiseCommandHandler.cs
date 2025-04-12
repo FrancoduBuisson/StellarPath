@@ -125,7 +125,7 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
         var cruise = await FetchAndPromptForEntitySelectionAsync<CruiseService, Cruise>(
             _cruiseService,
             service => service.GetAllAsync(),
-            c => $"{c.DepartureDestinationName} to {c.ArrivalDestinationName} ({c.LocalDepartureTime:yyyy-MM-dd HH:mm})",
+            c => $"{c.DepartureDestinationName} to {c.ArrivalDestinationName} ({DisplayHelper.FormatDateTime(c.LocalDepartureTime)})",
             c => c.CruiseId,
             "Fetching cruises for selection...",
             "No cruises found.",
@@ -307,12 +307,12 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
 
         if (criteria.StartDate.HasValue)
         {
-            titleParts.Add($"starting from {criteria.StartDate.Value:yyyy-MM-dd HH:mm}");
+            titleParts.Add($"starting from {DisplayHelper.FormatDateTime(criteria.StartDate.Value)}");
         }
 
         if (criteria.EndDate.HasValue)
         {
-            titleParts.Add($"ending at {criteria.EndDate.Value:yyyy-MM-dd HH:mm}");
+            titleParts.Add($"ending at {DisplayHelper.FormatDateTime(criteria.EndDate.Value)}");
         }
 
         if (criteria.StatusId.HasValue && !string.IsNullOrEmpty(criteria.StatusName))
@@ -322,12 +322,12 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
 
         if (criteria.MinPrice.HasValue)
         {
-            titleParts.Add($"with price >= ${criteria.MinPrice.Value:N2}");
+            titleParts.Add($"with price >= {DisplayHelper.FormatPrice(criteria.MinPrice.Value)}");
         }
 
         if (criteria.MaxPrice.HasValue)
         {
-            titleParts.Add($"with price <= ${criteria.MaxPrice.Value:N2}");
+            titleParts.Add($"with price <= {DisplayHelper.FormatPrice(criteria.MaxPrice.Value)}");
         }
 
         return string.Join(" ", titleParts);
@@ -437,10 +437,10 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
             return;
         }
 
-        await ExecuteWithSpinnerAsync($"Fetching cruises between {startDate:yyyy-MM-dd HH:mm} and {endDate:yyyy-MM-dd HH:mm}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Fetching cruises between {DisplayHelper.FormatDateTime(startDate)} and {DisplayHelper.FormatDateTime(endDate)}...", async ctx =>
         {
             var cruises = await _cruiseService.GetCruisesBetweenDatesAsync(startDate, endDate);
-            DisplayEntities(cruises, $"Cruises between {startDate:yyyy-MM-dd HH:mm} and {endDate:yyyy-MM-dd HH:mm}");
+            DisplayEntities(cruises, $"Cruises between {DisplayHelper.FormatDateTime(startDate)} and {DisplayHelper.FormatDateTime(endDate)}");
             return true;
         });
     }
@@ -603,7 +603,7 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
         var selectedCruise = SelectionHelper.SelectFromListById(
             scheduledCruises,
             c => c.CruiseId,
-            c => $"{c.DepartureDestinationName} to {c.ArrivalDestinationName} ({c.LocalDepartureTime:yyyy-MM-dd HH:mm})",
+            c => $"{c.DepartureDestinationName} to {c.ArrivalDestinationName} ({DisplayHelper.FormatDateTime(c.LocalDepartureTime)})",
             "Select a cruise to cancel");
 
         if (selectedCruise == null)
@@ -655,10 +655,10 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
         {
             c.CruiseId.ToString(),
             $"{c.DepartureDestinationName} -> {c.ArrivalDestinationName}",
-            $"{c.LocalDepartureTime:yyyy-MM-dd HH:mm}",
+            $"{DisplayHelper.FormatDateTime(c.LocalDepartureTime)}",
             FormatDuration(c.DurationMinutes),
             $"{c.SpaceshipName ?? "Unknown"} (ID: {c.SpaceshipId})",
-            $"${c.CruiseSeatPrice:N2}",
+            $"{DisplayHelper.FormatPrice(c.CruiseSeatPrice)}",
             c.CruiseStatusName ?? $"Status ID: {c.CruiseStatusId}"
         });
 
@@ -676,10 +676,10 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
             ["Capacity"] = cruise.Capacity?.ToString() ?? "Unknown",
             ["Cruise Speed"] = cruise.CruiseSpeedKmph.HasValue ? $"{cruise.CruiseSpeedKmph.Value:N0} kmph" : "Unknown",
             ["Route"] = $"{cruise.DepartureDestinationName} -> {cruise.ArrivalDestinationName}",
-            ["Departure Time"] = $"{cruise.LocalDepartureTime:yyyy-MM-dd HH:mm}",
-            ["Estimated Arrival"] = $"{estimatedArrival:yyyy-MM-dd HH:mm}",
+            ["Departure Time"] = $"{DisplayHelper.FormatDateTime(cruise.LocalDepartureTime)}",
+            ["Estimated Arrival"] = $"{DisplayHelper.FormatDateTime(estimatedArrival)}",
             ["Duration"] = FormatDuration(cruise.DurationMinutes),
-            ["Seat Price"] = $"${cruise.CruiseSeatPrice:N2}",
+            ["Seat Price"] = $"{DisplayHelper.FormatPrice(cruise.CruiseSeatPrice)}",
             ["Status"] = cruise.CruiseStatusName ?? $"Status ID: {cruise.CruiseStatusId}",
             ["Created By"] = cruise.CreatedByName ?? cruise.CreatedByGoogleId
         };
