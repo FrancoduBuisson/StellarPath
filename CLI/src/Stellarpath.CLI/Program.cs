@@ -32,8 +32,21 @@ class Program
             }
             else
             {
-                string input = UiHelper.PromptUserInput(context.CurrentUser);
-                exitRequested = await processor.ProcessCommandAsync(input);
+                var categories = processor.GetCommandCategories();
+                var commandDescriptions = processor.GetCommandDescriptions();
+                var categoryDescriptions = processor.GetCategoryDescriptions();
+
+                string selectedCategory = UiHelper.ShowMainMenu(context.CurrentUser, categories);
+
+                if (categories.TryGetValue(selectedCategory, out var category))
+                {
+                    string selectedCommand = UiHelper.ShowCategoryMenu(selectedCategory, category, commandDescriptions);
+
+                    if (!string.IsNullOrEmpty(selectedCommand))
+                    {
+                        exitRequested = await processor.ProcessCommandAsync(selectedCommand);
+                    }
+                }
             }
         }
 
