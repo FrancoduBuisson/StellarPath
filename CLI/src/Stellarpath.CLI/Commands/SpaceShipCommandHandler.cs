@@ -412,13 +412,22 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
             return;
         }
 
+        var cancelCruises = InputHelper.AskForConfirmation(
+            "Do you want to automatically cancel all scheduled cruises for this spaceship?",
+            true);
+
         await ExecuteWithSpinnerAsync($"Deactivating spaceship ID {selectedSpaceship.SpaceshipId}...", async ctx =>
         {
-            var result = await _spaceshipService.DeactivateAsync(selectedSpaceship.SpaceshipId);
+            var (success, cancelledCruises) = await _spaceshipService.DeactivateAsync(selectedSpaceship.SpaceshipId, cancelCruises);
 
-            if (result)
+            if (success)
             {
                 AnsiConsole.MarkupLine("[green]Spaceship deactivated successfully![/]");
+
+                if (cancelCruises && cancelledCruises > 0)
+                {
+                    AnsiConsole.MarkupLine($"[green]{cancelledCruises} scheduled cruise(s) were automatically cancelled.[/]");
+                }
 
                 var spaceship = await _spaceshipService.GetByIdAsync(selectedSpaceship.SpaceshipId);
                 if (spaceship != null)
@@ -426,7 +435,7 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
                     DisplayEntityDetails(spaceship);
                 }
             }
-            return true;
+            return success;
         });
     }
 
