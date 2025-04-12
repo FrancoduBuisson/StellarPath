@@ -199,7 +199,7 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
             return;
         }
 
-        await ExecuteWithSpinnerAsync($"Checking spaceship availability from {startDate:yyyy-MM-dd HH:mm} to {endDate:yyyy-MM-dd HH:mm}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Checking spaceship availability from {DisplayHelper.FormatDateTime(startDate)} to {DisplayHelper.FormatDateTime(endDate)}...", async ctx =>
         {
             var availableSpaceships = await _spaceshipService.GetAvailableSpaceshipsForTimeRangeAsync(startDate, endDate);
 
@@ -209,7 +209,7 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
                 return true;
             }
 
-            DisplayAvailableSpaceships(availableSpaceships, $"Available Spaceships from {startDate:yyyy-MM-dd HH:mm} to {endDate:yyyy-MM-dd HH:mm}");
+            DisplayAvailableSpaceships(availableSpaceships, $"Available Spaceships from {DisplayHelper.FormatDateTime(startDate)} to {DisplayHelper.FormatDateTime(endDate)}");
             return true;
         });
     }
@@ -492,7 +492,7 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
                     : $"{duration.TotalHours:F1} hours";
 
                 timeSlotTable.AddRow(
-                    $"{slot.StartTime:yyyy-MM-dd HH:mm} to {slot.EndTime:yyyy-MM-dd HH:mm}",
+                    $"{DisplayHelper.FormatDateTime(slot.StartTime)} to {DisplayHelper.FormatDateTime(slot.EndTime)}",
                     formattedDuration
                 );
             }
