@@ -3,6 +3,7 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -129,71 +130,86 @@ public class UserCommandHandler
             });
     }
 
-    private async Task SearchUsersAsync()
+private async Task SearchUsersAsync()
+{
+    if (!EnsureAdminPermission())
+        return;
+
+    var searchCriteria = new UserSearchCriteria();
+
+    var criteriaOptions = new List<string>
     {
-        if (!EnsureAdminPermission())
-            return;
+        "Name (searches first name, last name, and email)",
+        "First Name",
+        "Last Name",
+        "Email",
+        "Role",
+        "Active Status"
+    };
 
-        var searchCriteria = new UserSearchCriteria();
+    var selectedCriteria = AnsiConsole.Prompt(
+        new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select search criteria to include[/]")
+            .PageSize(10)
+            .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(criteriaOptions));
 
-        InputHelper.CollectSearchCriteria<UserSearchCriteria>(
-            "name (searches first name, last name, and email)",
-            criteria => criteria.Name = InputHelper.AskForString("Enter name to search for:"),
-            searchCriteria);
+    var criteriaActions = new Dictionary<string, Action>
+    {
+        ["Name (searches first name, last name, and email)"] = () =>
+            searchCriteria.Name = InputHelper.AskForString("[cyan]Enter name to search for:[/]"),
 
-        InputHelper.CollectSearchCriteria<UserSearchCriteria>(
-            "first name",
-            criteria => criteria.FirstName = InputHelper.AskForString("Enter first name:"),
-            searchCriteria);
+        ["First Name"] = () =>
+            searchCriteria.FirstName = InputHelper.AskForString("[cyan]Enter first name:[/]"),
 
-        InputHelper.CollectSearchCriteria<UserSearchCriteria>(
-            "last name",
-            criteria => criteria.LastName = InputHelper.AskForString("Enter last name:"),
-            searchCriteria);
+        ["Last Name"] = () =>
+            searchCriteria.LastName = InputHelper.AskForString("[cyan]Enter last name:[/]"),
 
-        InputHelper.CollectSearchCriteria<UserSearchCriteria>(
-            "email",
-            criteria => criteria.Email = InputHelper.AskForString("Enter email:"),
-            searchCriteria);
+        ["Email"] = () =>
+            searchCriteria.Email = InputHelper.AskForString("[cyan]Enter email:[/]"),
 
-        var includeRole = InputHelper.AskForConfirmation("Do you want to filter by role?", false);
-        if (includeRole)
-        {
+        ["Role"] = () =>
             searchCriteria.Role = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("Select role to filter by")
-                    .AddChoices(_availableRoles));
-        }
+                    .Title("[cyan]Select role to filter by[/]")
+                    .PageSize(10)
+                    .AddChoices(_availableRoles)),
 
-        InputHelper.CollectSearchCriteria<UserSearchCriteria>(
-            "active status",
-            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active users?"),
-            searchCriteria);
+        ["Active Status"] = () =>
+            searchCriteria.IsActive = InputHelper.AskForConfirmation("[cyan]Show only active users?[/]")
+    };
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Searching users...", async ctx =>
-            {
-                var users = await _userService.SearchUsersAsync(searchCriteria);
-
-                string title = "Search Results for Users";
-                if (!string.IsNullOrEmpty(searchCriteria.Name))
-                    title += $" with name containing '{searchCriteria.Name}'";
-                if (!string.IsNullOrEmpty(searchCriteria.FirstName))
-                    title += $" with first name containing '{searchCriteria.FirstName}'";
-                if (!string.IsNullOrEmpty(searchCriteria.LastName))
-                    title += $" with last name containing '{searchCriteria.LastName}'";
-                if (!string.IsNullOrEmpty(searchCriteria.Email))
-                    title += $" with email containing '{searchCriteria.Email}'";
-                if (!string.IsNullOrEmpty(searchCriteria.Role))
-                    title += $" with role '{searchCriteria.Role}'";
-                if (searchCriteria.IsActive.HasValue)
-                    title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-
-                DisplayUsers(users, title);
-            });
+    foreach (var criterion in selectedCriteria)
+    {
+        if (criteriaActions.TryGetValue(criterion, out var action))
+            action();
     }
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green bold"))
+        .StartAsync("[yellow]Searching users...[/]", async ctx =>
+        {
+            var users = await _userService.SearchUsersAsync(searchCriteria);
+
+            var title = new StringBuilder("[bold blue]Search Results for Users[/]");
+            if (!string.IsNullOrEmpty(searchCriteria.Name))
+                title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+            if (!string.IsNullOrEmpty(searchCriteria.FirstName))
+                title.Append($" with [yellow]first name[/] containing '[green]{searchCriteria.FirstName}[/]'");
+            if (!string.IsNullOrEmpty(searchCriteria.LastName))
+                title.Append($" with [yellow]last name[/] containing '[green]{searchCriteria.LastName}[/]'");
+            if (!string.IsNullOrEmpty(searchCriteria.Email))
+                title.Append($" with [yellow]email[/] containing '[green]{searchCriteria.Email}[/]'");
+            if (!string.IsNullOrEmpty(searchCriteria.Role))
+                title.Append($" with [yellow]role[/] '[green]{searchCriteria.Role}[/]'");
+            if (searchCriteria.IsActive.HasValue)
+                title.Append($" ([yellow]Status[/]: [green]{(searchCriteria.IsActive.Value ? "Active" : "Inactive")}[/])");
+
+            DisplayUsers(users, title.ToString());
+        });
+}
+
 
     private async Task ActivateUserAsync()
     {

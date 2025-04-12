@@ -3,6 +3,7 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -98,38 +99,54 @@ public class GalaxyCommandHandler : CommandHandlerBase<Galaxy>
         }
     }
 
-    private async Task SearchGalaxiesAsync()
+   private async Task SearchGalaxiesAsync()
+{
+    var searchCriteria = new GalaxySearchCriteria();
+
+    InputHelper.CollectSearchCriteria<GalaxySearchCriteria>(
+        "name",
+        criteria => criteria.Name = InputHelper.AskForString("Enter galaxy name (or part of name):"),
+        searchCriteria);
+
+    var statusOptions = new List<string> { "All Galaxies", "Active Only", "Inactive Only" };
+    var statusSelection = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("[cyan]Select active status filter[/]")
+            .PageSize(10)
+            .AddChoices(statusOptions));
+
+    switch (statusSelection)
     {
-        var searchCriteria = new GalaxySearchCriteria();
-
-        InputHelper.CollectSearchCriteria<GalaxySearchCriteria>(
-            "name",
-            criteria => criteria.Name = InputHelper.AskForString("Enter galaxy name (or part of name):"),
-            searchCriteria);
-
-        InputHelper.CollectSearchCriteria<GalaxySearchCriteria>(
-            "active status",
-            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active galaxies?"),
-            searchCriteria);
-
-        await ExecuteWithSpinnerAsync("Searching galaxies...", async ctx =>
-        {
-            var galaxies = await _galaxyService.SearchGalaxiesAsync(searchCriteria);
-
-            string title = "Search Results for Galaxies";
-            if (!string.IsNullOrEmpty(searchCriteria.Name))
-            {
-                title += $" containing '{searchCriteria.Name}'";
-            }
-            if (searchCriteria.IsActive.HasValue)
-            {
-                title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-            }
-
-            DisplayEntities(galaxies, title);
-            return true;
-        });
+        case "Active Only":
+            searchCriteria.IsActive = true;
+            break;
+        case "Inactive Only":
+            searchCriteria.IsActive = false;
+            break;
+        case "All Galaxies":
+        default:
+            searchCriteria.IsActive = null;
+            break;
     }
+
+    await ExecuteWithSpinnerAsync("Searching galaxies...", async ctx =>
+    {
+        var galaxies = await _galaxyService.SearchGalaxiesAsync(searchCriteria);
+
+        var title = new StringBuilder("[bold blue]Search Results for Galaxies[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.Name))
+        {
+            title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+        }
+        if (searchCriteria.IsActive.HasValue)
+        {
+            title.Append($" ([yellow]Status[/]: [green]{(searchCriteria.IsActive.Value ? "Active" : "Inactive")}[/])");
+        }
+
+        DisplayEntities(galaxies, title.ToString());
+        return true;
+    });
+}
 
     private async Task CreateGalaxyAsync()
     {
