@@ -62,4 +62,35 @@ public class SpaceshipService : ApiServiceBase<Spaceship>
             return new List<SpaceshipAvailability>();
         }
     }
+
+    public async Task<(bool success, int cancelledCruises)> DeactivateAsync(int id, bool cancelCruises = false)
+    {
+        try
+        {
+            var query = cancelCruises ? $"?cancelCruises={cancelCruises}" : "";
+            var response = await HttpClient.PatchAsync($"{BaseUrl}/{id}/deactivate{query}", null);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Item with ID {id} not found.[/]");
+                return (false, 0);
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<DeactivationResult>(content, JsonOptions);
+                return (true, result?.CancelledCruises ?? 0);
+            }
+
+            return (true, 0);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error deactivating item: {ex.Message}[/]");
+            return (false, 0);
+        }
+    }
 }

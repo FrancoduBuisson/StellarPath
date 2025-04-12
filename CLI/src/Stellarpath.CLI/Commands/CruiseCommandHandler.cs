@@ -654,7 +654,7 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
         var rows = cruiseList.Select(c => new[]
         {
             c.CruiseId.ToString(),
-            $"{c.DepartureDestinationName} → {c.ArrivalDestinationName}",
+            $"{c.DepartureDestinationName} -> {c.ArrivalDestinationName}",
             $"{c.LocalDepartureTime:yyyy-MM-dd HH:mm}",
             FormatDuration(c.DurationMinutes),
             $"{c.SpaceshipName ?? "Unknown"} (ID: {c.SpaceshipId})",
@@ -675,7 +675,7 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
             ["Spaceship"] = $"{cruise.SpaceshipName ?? "Unknown"} (ID: {cruise.SpaceshipId})",
             ["Capacity"] = cruise.Capacity?.ToString() ?? "Unknown",
             ["Cruise Speed"] = cruise.CruiseSpeedKmph.HasValue ? $"{cruise.CruiseSpeedKmph.Value:N0} kmph" : "Unknown",
-            ["Route"] = $"{cruise.DepartureDestinationName} → {cruise.ArrivalDestinationName}",
+            ["Route"] = $"{cruise.DepartureDestinationName} -> {cruise.ArrivalDestinationName}",
             ["Departure Time"] = $"{cruise.LocalDepartureTime:yyyy-MM-dd HH:mm}",
             ["Estimated Arrival"] = $"{estimatedArrival:yyyy-MM-dd HH:mm}",
             ["Duration"] = FormatDuration(cruise.DurationMinutes),
