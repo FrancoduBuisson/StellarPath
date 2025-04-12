@@ -39,6 +39,21 @@ public static class HelpRenderer
         );
 
         table.AddRow(
+            "[green]shipmodels[/]",
+            "Manage ship models (view, search, create, update)"
+        );
+
+        table.AddRow(
+            "[green]spaceships[/]",
+            "Manage spaceships (view, search, create, update, activate/deactivate, check availability)"
+        );
+
+        table.AddRow(
+            "[green]users[/]",
+            "Manage users (view, search, activate/deactivate, update roles)"
+        );
+
+        table.AddRow(
             "[green]logout[/]",
             "Logout of current session"
         );
