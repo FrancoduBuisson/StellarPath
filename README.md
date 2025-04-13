@@ -9,18 +9,23 @@ StellarPath is a project that provides a CLI application for intergalactic trave
 Ensure target exists
 dotnet run -- build
 
-run docker-compose file
-
-navigate to API dir/ and run  **dotnet run**
-
-You can access the API from port 5291 on your local browser:
-http://localhost:5291/swagger/index.html
-
+- run docker-compose file
 
 ### Prerequisites
 
 - .NET 9.0.203+
 
+### Running the Server
+
+1. Open a terminal or command prompt.
+2. Navigate to the `api` directory:
+    ```sh
+    cd API\src\StellarPath.API
+
+    dotnet run
+    ```
+You can access the API from port 5291 on your local browser:
+http://localhost:5291/swagger/index.html
 
 ### Running the CLI Application
 
@@ -28,7 +33,9 @@ http://localhost:5291/swagger/index.html
 2. Navigate to the `cli` directory:
 
     ```sh
-    cd cli
+    cd CLi
+
+    cd src
     ```
 
 3. Run the CLI application:
