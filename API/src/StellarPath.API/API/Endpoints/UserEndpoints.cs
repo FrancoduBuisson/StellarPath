@@ -20,8 +20,8 @@ public static class UserEndpoints
         userGroup.MapGet("/", GetAllUsers)
             .WithName("GetAllUsers")
             .Produces<IEnumerable<UserDto>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized);
-            //.RequireAuthorization("Admin");
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization("Admin");
 
         userGroup.MapGet("/{googleId}", GetUserById)
             .WithName("GetUserById")

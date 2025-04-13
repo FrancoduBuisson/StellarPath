@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.Configure<GoogleAuthSettings>(configuration.GetSection("GoogleAuth"));
         services.Configure<JWTSettings>(configuration.GetSection("Jwt"));
         
+
         services.AddSingleton<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IJwtService, JwtService>();
 
