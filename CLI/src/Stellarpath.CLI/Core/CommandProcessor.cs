@@ -103,13 +103,15 @@ public class CommandProcessor
             case CommandMenuStructure.CMD_USERS:
                 await _userCommandHandler.HandleAsync();
                 break;
+            case CommandMenuStructure.CMD_CLEAR:
+                Console.Clear();
+                break;
             case CommandMenuStructure.CMD_EXIT:
                 return true;
             default:
                 AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}.[/]");
                 break;
         }
-
         return false;
     }
 }

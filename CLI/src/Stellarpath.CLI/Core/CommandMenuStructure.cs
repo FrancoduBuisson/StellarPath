@@ -16,6 +16,7 @@ public static class CommandMenuStructure
     public const string TRAVEL = "Travel";
     public const string ACCOUNT_SYSTEM = "Account & System";
     public const string BACK = "<- Back to Main Menu";
+    public const string CLEAR = "Clear";
 
     public const string CMD_GALAXIES = "galaxies";
     public const string CMD_STARSYSTEMS = "starsystems";
@@ -28,6 +29,7 @@ public static class CommandMenuStructure
     public const string CMD_USERS = "users";
     public const string CMD_LOGOUT = "logout";
     public const string CMD_EXIT = "exit";
+    public const string CMD_CLEAR = "clear";
 
     public static Dictionary<string, CommandCategory> GetCommandCategories(bool isAdmin)
     {
@@ -70,6 +72,14 @@ public static class CommandMenuStructure
                     CMD_LOGOUT,
                     CMD_EXIT
                 }
+            },
+            [CLEAR] = new CommandCategory 
+            { 
+                Name = CLEAR,
+                Commands = new List<string> 
+                { 
+                    CMD_CLEAR
+                }
             }
         };
 
@@ -108,7 +118,8 @@ public static class CommandMenuStructure
             [CELESTIAL_BODIES] = "Galaxies, Star Systems, and Destinations",
             [FLEET_MANAGEMENT] = "Ship Models and Spaceships",
             [TRAVEL] = "Cruises and Travel Management",
-            [ACCOUNT_SYSTEM] = "Help, User Info, and System Functions"
+            [ACCOUNT_SYSTEM] = "Help, User Info, and System Functions",
+            [CLEAR] = "Clear the console ouput"
         };
     }
 }
