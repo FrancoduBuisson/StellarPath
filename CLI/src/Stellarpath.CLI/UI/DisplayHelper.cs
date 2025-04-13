@@ -68,8 +68,6 @@ public static class DisplayHelper
         {
             return value switch
             {
-                var v when v.Contains("Active", StringComparison.OrdinalIgnoreCase) => "[green]Active[/]",
-                var v when v.Contains("Inactive", StringComparison.OrdinalIgnoreCase) => "[yellow]Inactive[/]",
                 var v when v.Contains("Scheduled", StringComparison.OrdinalIgnoreCase) => "[blue]Scheduled[/]",
                 var v when v.Contains("In Progress", StringComparison.OrdinalIgnoreCase) => "[green]In Progress[/]",
                 var v when v.Contains("Completed", StringComparison.OrdinalIgnoreCase) => "[cyan]Completed[/]",

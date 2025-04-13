@@ -116,52 +116,93 @@ public class SpaceshipCommandHandler : CommandHandlerBase<Spaceship>
         }
     }
 
-    private async Task SearchSpaceshipsAsync()
+private async Task SearchSpaceshipsAsync()
+{
+    var searchCriteria = new SpaceshipSearchCriteria();
+
+    var criteriaOptions = new List<string>
     {
-        var searchCriteria = new SpaceshipSearchCriteria();
+        "Ship Model Filter",
+        "Active Status"
+    };
 
-        var includeModel = InputHelper.AskForConfirmation("Do you want to filter by ship model?", false);
-        if (includeModel)
+    var selectedCriteria = AnsiConsole.Prompt(
+        new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select search criteria to include[/]")
+            .PageSize(10)
+            .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(criteriaOptions));
+
+    if (selectedCriteria.Contains("Ship Model Filter"))
+    {
+        var modelFilterOptions = new List<string>
         {
-            var byModelId = InputHelper.AskForConfirmation("Search by model ID? (No = search by model name)", false);
-            if (byModelId)
-            {
-                searchCriteria.ModelId = InputHelper.AskForInt("Enter ship model ID:");
-            }
-            else
-            {
-                searchCriteria.ModelName = InputHelper.AskForString("Enter ship model name (or part of name):");
-            }
+            "Search by Model ID",
+            "Search by Model Name"
+        };
+
+        var modelFilterChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by ship model?[/]")
+                .PageSize(10)
+                .AddChoices(modelFilterOptions));
+
+        if (modelFilterChoice == "Search by Model ID")
+        {
+            searchCriteria.ModelId = InputHelper.AskForInt("[cyan]Enter ship model ID:[/]");
         }
-
-        InputHelper.CollectSearchCriteria<SpaceshipSearchCriteria>(
-            "active status",
-            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active spaceships?"),
-            searchCriteria);
-
-        await ExecuteWithSpinnerAsync("Searching spaceships...", async ctx =>
+        else
         {
-            var spaceships = await _spaceshipService.SearchSpaceshipsAsync(searchCriteria);
-
-            string title = "Search Results for Spaceships";
-            if (searchCriteria.ModelId.HasValue)
-            {
-                title += $" with model ID {searchCriteria.ModelId.Value}";
-            }
-            if (!string.IsNullOrEmpty(searchCriteria.ModelName))
-            {
-                title += $" with model name containing '{searchCriteria.ModelName}'";
-            }
-            if (searchCriteria.IsActive.HasValue)
-            {
-                title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-            }
-
-            DisplayEntities(spaceships, title);
-            return true;
-        });
+            searchCriteria.ModelName = InputHelper.AskForString("[cyan]Enter ship model name (or part of name):[/]");
+        }
     }
 
+    if (selectedCriteria.Contains("Active Status"))
+    {
+        var statusOptions = new List<string> { "All Spaceships", "Active Only", "Inactive Only" };
+        var statusSelection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Select active status filter[/]")
+                .PageSize(10)
+                .AddChoices(statusOptions));
+
+        switch (statusSelection)
+        {
+            case "Active Only":
+                searchCriteria.IsActive = true;
+                break;
+            case "Inactive Only":
+                searchCriteria.IsActive = false;
+                break;
+            case "All Spaceships":
+            default:
+                searchCriteria.IsActive = null;
+                break;
+        }
+    }
+
+    await ExecuteWithSpinnerAsync("Searching spaceships...", async ctx =>
+    {
+        var spaceships = await _spaceshipService.SearchSpaceshipsAsync(searchCriteria);
+
+        string title = "Search Results for Spaceships";
+        if (searchCriteria.ModelId.HasValue)
+        {
+            title += $" with model ID {searchCriteria.ModelId.Value}";
+        }
+        if (!string.IsNullOrEmpty(searchCriteria.ModelName))
+        {
+            title += $" with model name containing '{searchCriteria.ModelName}'";
+        }
+        if (searchCriteria.IsActive.HasValue)
+        {
+            title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
+        }
+
+        DisplayEntities(spaceships, title);
+        return true;
+    });
+}
     private async Task ViewSpaceshipsByModelAsync()
     {
         var shipModel = await FetchAndPromptForEntitySelectionAsync<ShipModelService, ShipModel>(
