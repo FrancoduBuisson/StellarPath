@@ -78,6 +78,12 @@ namespace StelarPath.API.Infrastructure.Data.Repositories
             return await UnitOfWork.Connection.QueryAsync<BookingStatus>(query);
         }
 
+        public async Task<IEnumerable<BookingStatus>> GetByIdsAsync(IEnumerable<int> ids)
+        {
+            const string query = "SELECT * FROM booking_statuses WHERE booking_status_id = ANY(@Ids)";
+            return await UnitOfWork.Connection.QueryAsync<BookingStatus>(query, new { Ids = ids.ToArray() });
+        }
+
         public async Task<IEnumerable<BookingStatus>> SearchStatusesAsync(string? name, bool? isActive)
         {
             var conditions = new List<string>();

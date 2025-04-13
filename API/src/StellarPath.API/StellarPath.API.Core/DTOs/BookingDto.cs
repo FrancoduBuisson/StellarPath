@@ -34,13 +34,7 @@ namespace StellarPath.API.Core.DTOs
         public DateTime BookingDate { get; set; }
         public DateTime BookingExpiration { get; set; }
         public string BookingStatus { get; set; } = string.Empty;
-        public int BookingStatusId { get; set; }
-
-        
-        public CruiseStatusDto CruiseStatus { get; set; } = new CruiseStatusDto();
-        public List<BookingHistoryDto> History { get; set; } = [];
-
-        
+        public int BookingStatusId { get; set; }        
         public bool IsActive => BookingStatus != "Cancelled" && BookingStatus != "Expired";
         public bool IsUpcoming => DepartureTime > DateTime.UtcNow && IsActive;
         public bool IsCompleted => ArrivalTime < DateTime.UtcNow && IsActive;

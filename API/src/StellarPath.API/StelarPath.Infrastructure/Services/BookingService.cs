@@ -22,6 +22,7 @@ namespace StelarPath.API.Infrastructure.Services
         private readonly IStarSystemRepository _starSystemRepository;
         private readonly IGalaxyRepository _galaxyRepository;
         private readonly IShipModelRepository _shipModelRepository;
+        private readonly IUserProvider _userProvider;
         private readonly IUnitOfWork _unitOfWork;
 
         public BookingService(
@@ -35,6 +36,7 @@ namespace StelarPath.API.Infrastructure.Services
             IStarSystemRepository starSystemRepository,
             IGalaxyRepository galaxyRepository,
             IShipModelRepository shipModelRepository,
+            IUserProvider userProvider,
             IUnitOfWork unitOfWork)
         {
             _bookingRepository = bookingRepository;
@@ -47,40 +49,52 @@ namespace StelarPath.API.Infrastructure.Services
             _starSystemRepository = starSystemRepository;
             _galaxyRepository = galaxyRepository;
             _shipModelRepository = shipModelRepository;
+            _userProvider = userProvider;
             _unitOfWork = unitOfWork;
         }
 
         public async Task<IEnumerable<BookingDto>> GetAllBookingsAsync()
         {
             var bookings = await _bookingRepository.GetAllAsync();
-            return await Task.WhenAll(bookings.Select(async b => await MapToDto(b)));
+
+            var result = new List<BookingDto>();
+
+            foreach (var booking in bookings)
+            {
+                var bookingDto = await MapToDto(booking);
+
+                if (bookingDto != null)
+                {
+                    result.Add(bookingDto);
+                }
+            }
+            return result;
         }
 
-        public async Task<BookingDto> CreateBookingAsync(BookingDto bookingDto)
+        public async Task<BookingDto> CreateBookingAsync(int cruiseId, int seatNumber)
         {
             try
             {
                 _unitOfWork.BeginTransaction();
 
+                var bookingStatus = await _bookingStatusRepository.GetByStatusNameAsync("Reserved");
+
+                if (bookingStatus == null) { return new BookingDto(); }
+
+                var userId = _userProvider.GetCurrentUserId();
+
                 var booking = new Booking
                 {
-                    GoogleId = bookingDto.UserGoogleId,
-                    CruiseId = bookingDto.CruiseId,
-                    SeatNumber = bookingDto.SeatNumber,
+                    GoogleId = userId,
+                    CruiseId = cruiseId,
+                    SeatNumber = seatNumber,
                     BookingDate = DateTime.UtcNow,
                     BookingExpiration = DateTime.UtcNow.AddHours(24),
-                    BookingStatusId = 1 // Pending
+                    BookingStatusId = bookingStatus.BookingStatusId
                 };
 
-                int TotalBookings = await _bookingRepository.GetBookedSeatsCountForCruiseAsync(booking.CruiseId);
-                bool SeatAvailable = await _bookingRepository.IsSeatAvailableForCruiseAsync(booking.CruiseId, booking.SeatNumber);
-
-                //check seat and return available seats if not found
-                //check cruis Status
-
                 var bookingId = await _bookingRepository.AddAsync(booking);
-                await _bookingHistoryRepository.AddStatusChangeAsync(bookingId, 0, booking.BookingStatusId);
-
+                    
                 _unitOfWork.Commit();
                 return await GetBookingByIdAsync(bookingId);
             }
@@ -91,18 +105,31 @@ namespace StelarPath.API.Infrastructure.Services
             }
         }
 
+        public async Task<int> GetBookedSeatsCountForCruiseAsync(int cruiseId)
+        {
+            return await _bookingRepository.GetBookedSeatsCountForCruiseAsync(cruiseId);
+        }
+
+        public async Task<bool> IsSeatAvailableForCruiseAsync(int cruiseId, int seatNumber)
+        {
+
+            bool isSeatAvailable = await _bookingRepository.IsSeatAvailableForCruiseAsync(cruiseId, seatNumber);
+
+            return isSeatAvailable;
+        }
+
         public async Task<bool> CancelBookingAsync(int bookingId)
         {
             try
             {
-                _unitOfWork.BeginTransaction();
 
+                _unitOfWork.BeginTransaction();
+                var booking = await _bookingRepository.GetByIdAsync(bookingId);
                 var cancelledStatus = await _bookingStatusRepository.GetByStatusNameAsync("Cancelled");
                 var result = await _bookingRepository.UpdateBookingStatusAsync(bookingId, cancelledStatus.BookingStatusId);
 
                 if (result)
                 {
-                    var booking = await _bookingRepository.GetByIdAsync(bookingId);
                     await _bookingHistoryRepository.AddStatusChangeAsync(
                         bookingId,
                         booking.BookingStatusId,
@@ -110,6 +137,7 @@ namespace StelarPath.API.Infrastructure.Services
                 }
 
                 _unitOfWork.Commit();
+                
                 return result;
             }
             catch
@@ -123,14 +151,15 @@ namespace StelarPath.API.Infrastructure.Services
         {
             try
             {
-                _unitOfWork.BeginTransaction();
 
-                var confirmedStatus = await _bookingStatusRepository.GetByStatusNameAsync("Confirmed");
+                _unitOfWork.BeginTransaction();
+                var booking = await _bookingRepository.GetByIdAsync(bookingId);
+                var confirmedStatus = await _bookingStatusRepository.GetByStatusNameAsync("Completed");
                 var result = await _bookingRepository.UpdateBookingStatusAsync(bookingId, confirmedStatus.BookingStatusId);
 
                 if (result)
                 {
-                    var booking = await _bookingRepository.GetByIdAsync(bookingId);
+                    
                     await _bookingHistoryRepository.AddStatusChangeAsync(
                         bookingId,
                         booking.BookingStatusId,
@@ -152,71 +181,59 @@ namespace StelarPath.API.Infrastructure.Services
             var booking = await _bookingRepository.GetByIdAsync(bookingId);
             if (booking == null) return null;
 
-            var cruise = await _cruiseRepository.GetByIdAsync(booking.CruiseId);
-            if (cruise == null) return null;
-
-            var user = await _userRepository.GetByGoogleIdAsync(booking.GoogleId);
-            var departureDest = await _destinationRepository.GetByIdAsync(cruise.DepartureDestinationId);
-            var arrivalDest = await _destinationRepository.GetByIdAsync(cruise.ArrivalDestinationId);
-            var spaceship = await _spaceshipRepository.GetByIdAsync(cruise.SpaceshipId);
-            var status = await _bookingStatusRepository.GetByIdAsync(booking.BookingStatusId);
-            var history = await _bookingHistoryRepository.GetHistoryForBookingAsync(bookingId);
-            var shipModel = await _shipModelRepository.GetByIdAsync(spaceship.ModelId);
-
-            return new BookingDto
-            {
-                BookingId = booking.BookingId,
-                UserGoogleId = booking.GoogleId,
-                UserEmail = user?.Email ?? string.Empty,
-                UserFullName = $"{user?.FirstName} {user?.LastName}",
-                CruiseId = booking.CruiseId,
-                DepartureTime = cruise.LocalDepartureTime,
-                DurationMinutes = cruise.DurationMinutes,
-                SeatPrice = cruise.CruiseSeatPrice,
-                SpaceshipModel = shipModel?.ModelName ?? string.Empty,
-                SpaceshipCapacity = shipModel?.Capacity ?? 0,
-                DepartureDestination = departureDest?.Name ?? string.Empty,
-                DepartureStarSystem = await GetStarSystemName(departureDest?.SystemId),
-                DepartureGalaxy = await GetGalaxyName(departureDest?.SystemId),
-                ArrivalDestination = arrivalDest?.Name ?? string.Empty,
-                ArrivalStarSystem = await GetStarSystemName(arrivalDest?.SystemId),
-                ArrivalGalaxy = await GetGalaxyName(arrivalDest?.SystemId),
-                SeatNumber = booking.SeatNumber,
-                BookingDate = booking.BookingDate,
-                BookingExpiration = booking.BookingExpiration,
-                BookingStatus = status?.StatusName ?? string.Empty,
-                BookingStatusId = booking.BookingStatusId,
-                History = (await Task.WhenAll(history.Select(async h =>
-                {
-                    var prevStatus = await _bookingStatusRepository.GetByIdAsync(h.PreviousBookingStatusId);
-                    var newStatus = await _bookingStatusRepository.GetByIdAsync(h.NewBookingStatusId);
-                    return new BookingHistoryDto
-                    {
-                        BookingHistoryId = h.HistoryId,
-                        ChangedAt = h.ChangedAt,
-                        PreviousStatus = prevStatus?.StatusName ?? "Unknown",
-                        NewStatus = newStatus?.StatusName ?? "Unknown"
-                    };
-                }))).ToList()
-            };
+            return await MapToDto(booking);
+            
         }
 
         public async Task<IEnumerable<BookingDto>> GetBookingsForUserAsync(string googleId)
         {
             var bookings = await _bookingRepository.GetBookingsForUserAsync(googleId);
-            return await Task.WhenAll(bookings.Select(async b => await GetBookingByIdAsync(b.BookingId)));
+            var result = new List<BookingDto>();
+
+            foreach (var booking in bookings)
+            {
+                var userBooking = await GetBookingByIdAsync(booking.BookingId);
+
+                if (userBooking != null)
+                {
+                    result.Add(userBooking);
+                }
+            }
+            return result;
         }
 
         public async Task<IEnumerable<BookingDto>> GetActiveBookingsForUserAsync(string googleId)
         {
             var bookings = await _bookingRepository.GetActiveBookingsForUserAsync(googleId);
-            return await Task.WhenAll(bookings.Select(async b => await GetBookingByIdAsync(b.BookingId)));
+            var result = new List<BookingDto>();
+            foreach (var booking in bookings)
+            {
+                var activeBooking = await GetBookingByIdAsync(booking.BookingId);
+
+                if (activeBooking != null)
+                {
+                    result.Add(activeBooking);
+                }
+            }
+            return result;
         }
 
         public async Task<IEnumerable<BookingDto>> GetBookingsForCruiseAsync(int cruiseId)
         {
             var bookings = await _bookingRepository.GetBookingsForCruiseAsync(cruiseId);
-            return await Task.WhenAll(bookings.Select(async b => await GetBookingByIdAsync(b.BookingId)));
+
+            var result = new List<BookingDto>();
+            foreach (var booking in bookings)
+            {
+                var cruiseBooking = await GetBookingByIdAsync(booking.BookingId);
+
+                if (cruiseBooking != null) {
+
+                    result.Add(cruiseBooking);
+                }
+            }
+
+            return result;
         }
 
         public async Task<bool> UpdateBookingAsync(BookingDto bookingDto)
@@ -255,18 +272,22 @@ namespace StelarPath.API.Infrastructure.Services
         public async Task<IEnumerable<BookingHistoryDto>> GetBookingHistoryAsync(int bookingId)
         {
             var history = await _bookingHistoryRepository.GetHistoryForBookingAsync(bookingId);
-            return await Task.WhenAll(history.Select(async h =>
+
+            var statusIds = history
+                .SelectMany(h => new[] { h.PreviousBookingStatusId, h.NewBookingStatusId })
+                .Distinct()
+                .ToList();
+
+            var statuses = (await _bookingStatusRepository.GetByIdsAsync(statusIds))
+                .ToDictionary(s => s.BookingStatusId, s => s.StatusName);
+
+            return history.Select(h => new BookingHistoryDto
             {
-                var prevStatus = await _bookingStatusRepository.GetByIdAsync(h.PreviousBookingStatusId);
-                var newStatus = await _bookingStatusRepository.GetByIdAsync(h.NewBookingStatusId);
-                return new BookingHistoryDto
-                {
-                    BookingHistoryId = h.HistoryId,
-                    ChangedAt = h.ChangedAt,
-                    PreviousStatus = prevStatus?.StatusName ?? "Unknown",
-                    NewStatus = newStatus?.StatusName ?? "Unknown"
-                };
-            }));
+                BookingHistoryId = h.HistoryId,
+                ChangedAt = h.ChangedAt,
+                PreviousStatus = statuses.GetValueOrDefault(h.PreviousBookingStatusId, "Unknown"),
+                NewStatus = statuses.GetValueOrDefault(h.NewBookingStatusId, "Unknown")
+            });
         }
 
         private async Task<string> GetStarSystemName(int? systemId)
@@ -301,16 +322,13 @@ namespace StelarPath.API.Infrastructure.Services
 
         private async Task<BookingDto> MapToDto(Booking booking)
         {
-            Console.WriteLine(booking.BookingId);
             var cruise = await _cruiseRepository.GetByIdAsync(booking.CruiseId);
             if (cruise == null) return null;
-
             var user = await _userRepository.GetByGoogleIdAsync(booking.GoogleId);
             var departureDest = await _destinationRepository.GetByIdAsync(cruise.DepartureDestinationId);
             var arrivalDest = await _destinationRepository.GetByIdAsync(cruise.ArrivalDestinationId);
             var spaceship = await _spaceshipRepository.GetByIdAsync(cruise.SpaceshipId);
             var status = await _bookingStatusRepository.GetByIdAsync(booking.BookingStatusId);
-            var history = await _bookingHistoryRepository.GetHistoryForBookingAsync(booking.BookingId);
             var shipModel = spaceship != null ? await _shipModelRepository.GetByIdAsync(spaceship.ModelId) : null;
 
             return new BookingDto
@@ -336,18 +354,6 @@ namespace StelarPath.API.Infrastructure.Services
                 BookingExpiration = booking.BookingExpiration,
                 BookingStatus = status?.StatusName ?? string.Empty,
                 BookingStatusId = booking.BookingStatusId,
-                History = [.. (await Task.WhenAll(history.Select(async h =>
-                {
-                    var prevStatus = await _bookingStatusRepository.GetByIdAsync(h.PreviousBookingStatusId);
-                    var newStatus = await _bookingStatusRepository.GetByIdAsync(h.NewBookingStatusId);
-                    return new BookingHistoryDto
-                    {
-                        BookingHistoryId = h.HistoryId,
-                        ChangedAt = h.ChangedAt,
-                        PreviousStatus = prevStatus?.StatusName ?? "Unknown",
-                        NewStatus = newStatus?.StatusName ?? "Unknown"
-                    };
-                })))]
             };
         }
     }

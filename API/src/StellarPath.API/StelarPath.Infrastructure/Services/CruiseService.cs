@@ -108,6 +108,18 @@ public class CruiseService(
             throw;
         }
     }
+
+    public async Task<IEnumerable<int>> GetAvailableSeatsForCruiseAsync(int cruiseId)
+    {
+        var availableSeats = await cruiseRepository.GetAvailableSeatsAsync(cruiseId);
+
+        if (availableSeats.Any())
+        {
+            return availableSeats;
+        }
+
+        return [];
+    }
     
     public async Task<IEnumerable<CruiseDto>> GetCruisesByStatusAsync(int statusId)
     {

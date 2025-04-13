@@ -11,6 +11,7 @@ public interface ICruiseService
     Task<IEnumerable<CruiseDto>> GetCruisesByArrivalDestinationAsync(int destinationId);
     Task<IEnumerable<CruiseDto>> GetCruisesBetweenDatesAsync(DateTime startDate, DateTime endDate);
     Task<IEnumerable<CruiseDto>> GetCruisesCreatedByUserAsync(string googleId);
+    Task<IEnumerable<int>> GetAvailableSeatsForCruiseAsync(int cruiseId);
     Task<int> CreateCruiseAsync(CreateCruiseDto cruiseDto, string createdByGoogleId);
     Task<bool> CancelCruiseAsync(int id);
     Task<bool> UpdateCruiseStatusesAsync();

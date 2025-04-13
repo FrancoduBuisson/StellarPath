@@ -61,6 +61,37 @@ public class CruiseRepository(IUnitOfWork unitOfWork) : Repository<Cruise>(unitO
         return result > 0;
     }
 
+    public async Task<IEnumerable<int>> GetAvailableSeatsAsync(int cruiseId)
+    {
+        var query = @"
+        WITH cruise_capacity AS (
+            SELECT sm.capacity
+            FROM cruises c
+            JOIN spaceships s ON c.spaceship_id = s.spaceship_id
+            JOIN ship_models sm ON s.model_id = sm.model_id
+            WHERE c.cruise_id = @CruiseId
+              AND c.cruise_status_id = 1 -- Active cruises only
+              AND s.is_active = TRUE
+        ),
+        
+        booked_seats AS (
+            SELECT b.seat_number
+            FROM bookings b
+            WHERE b.cruise_id = @CruiseId
+              AND b.booking_status_id NOT IN (
+                  SELECT booking_status_id 
+                  FROM booking_statuses 
+                  WHERE status_name IN ('Cancelled', 'Expired')
+              )
+        )
+        
+        SELECT s.seat_number
+        FROM generate_series(1, (SELECT capacity FROM cruise_capacity)) AS s(seat_number)
+        WHERE s.seat_number NOT IN (SELECT seat_number FROM booked_seats)";
+
+        return await UnitOfWork.Connection.QueryAsync<int>(query, new { CruiseId = cruiseId });
+    }
+
     public async Task<IEnumerable<Cruise>> GetCruisesBySpaceshipIdAsync(int spaceshipId)
     {
         var query = $"SELECT * FROM {TableName} WHERE spaceship_id = @SpaceshipId";

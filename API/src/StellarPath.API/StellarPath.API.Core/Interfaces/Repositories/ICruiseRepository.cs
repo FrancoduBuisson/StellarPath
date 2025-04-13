@@ -9,6 +9,7 @@ public interface ICruiseRepository : IRepository<Cruise>
     Task<IEnumerable<Cruise>> GetCruisesByArrivalDestinationAsync(int destinationId);
     Task<IEnumerable<Cruise>> GetCruisesBetweenDatesAsync(DateTime startDate, DateTime endDate);
     Task<IEnumerable<Cruise>> GetCruisesCreatedByUserAsync(string googleId);
+    Task<IEnumerable<int>> GetAvailableSeatsAsync(int cruiseId);
     Task<IEnumerable<Cruise>> SearchCruisesAsync(
         int? spaceshipId,
         int? departureDestinationId,

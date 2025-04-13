@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
+using StelarPath.API.Infrastructure.Data.Repositories;
 using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 
@@ -9,8 +11,8 @@ namespace API.Endpoints
         public static WebApplication RegisterBookingEndpoints(this WebApplication app)
         {
             var bookingsGroup = app.MapGroup("/api/bookings")
-                .WithTags("Bookings");
-                //.RequireAuthorization(); 
+                .WithTags("Bookings")
+                .RequireAuthorization();
 
             bookingsGroup.MapGet("/", GetAllBookings)
                 .WithName("GetAllBookings")
@@ -70,7 +72,7 @@ namespace API.Endpoints
 
             var adminBookingsGroup = app.MapGroup("/api/admin/bookings")
                 .WithTags("Bookings Admin")
-                .RequireAuthorization("AdminPolicy"); // Example policy
+                .RequireAuthorization("Admin");
 
             adminBookingsGroup.MapPost("/expire", ExpireOldBookings)
                 .WithName("ExpireOldBookings")
@@ -122,11 +124,20 @@ namespace API.Endpoints
 
         private static async Task<IResult> GetUserBookings(
             IBookingService bookingService,
-            string googleId)
+            IUserService userService,
+            IUserProvider userProvider,
+            [FromQuery] string? googleId = "")
         {
             try
             {
-                var bookings = await bookingService.GetBookingsForUserAsync(googleId);
+                string userId = googleId;
+
+                if (string.IsNullOrEmpty(userId)) {
+                    userId = userProvider.GetCurrentUserId();
+                }
+                
+                var user = await userService.GetUserByGoogleIdAsync(userId);
+                var bookings = await bookingService.GetBookingsForUserAsync(user.GoogleId);
                 return Results.Ok(bookings);
             }
             catch (Exception ex)
@@ -137,11 +148,19 @@ namespace API.Endpoints
 
         private static async Task<IResult> GetUserActiveBookings(
             IBookingService bookingService,
-            string googleId)
+            IUserProvider userProvider,
+            [FromQuery] string? googleId = "")
         {
             try
             {
-                var bookings = await bookingService.GetActiveBookingsForUserAsync(googleId);
+                var userId = googleId;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    userId = userProvider.GetCurrentUserId();
+                }
+
+                var bookings = await bookingService.GetActiveBookingsForUserAsync(userId);
                 return Results.Ok(bookings);
             }
             catch (Exception ex)
@@ -182,11 +201,61 @@ namespace API.Endpoints
 
         private static async Task<IResult> CreateBooking(
             IBookingService bookingService,
-            [FromBody] BookingDto bookingDto)
+            ICruiseService cruiseService,
+            ICruiseStatusService cruiseStatusService,
+            ISpaceshipService spaceshipService,
+            IShipModelService shipModelService,
+            int seatNumber,
+            int cruiseId)
         {
             try
             {
-                var createdBooking = await bookingService.CreateBookingAsync(bookingDto);
+                var cruise = await cruiseService.GetCruiseByIdAsync(cruiseId);
+
+                var scheduleCruiseStatus = await cruiseStatusService.GetScheduledStatusIdAsync();
+
+                if (cruise == null)
+                {
+                    return Results.NotFound("Cruise not found");
+                }
+
+                if (cruise.CruiseStatusId != scheduleCruiseStatus)
+                {
+                    return Results.BadRequest("This cruise is not available for booking");
+                }
+
+                if (cruise.SpaceshipName == null)
+                {
+                    return Results.NotFound("No spaceship found for cruise");
+                }
+
+                var totalBookings = await bookingService.GetBookedSeatsCountForCruiseAsync(cruise.CruiseId);
+
+                var availableSeats = await cruiseService.GetAvailableSeatsForCruiseAsync(cruise.CruiseId);
+
+                if (seatNumber < 0 || seatNumber > cruise.Capacity)
+                {
+                    return Results.BadRequest(new
+                    {
+                        Title = "Invalid seat selection",
+                        Detail = "The requested seat is is invalid",
+                        AvailableSeats = availableSeats,
+                    });
+                }
+
+                bool isSeatAvailable = await bookingService.IsSeatAvailableForCruiseAsync(cruiseId, seatNumber);
+
+                if (!isSeatAvailable)
+                {
+                    return Results.Conflict(new
+                    {
+                        Title = "Invalid seat selection",
+                        Detail = "The requested seat is is invalid",
+                        AvailableSeats = availableSeats,
+                    });
+                }
+
+                var createdBooking = await bookingService.CreateBookingAsync(cruiseId, seatNumber);
                 return Results.Created($"/api/bookings/{createdBooking.BookingId}", createdBooking);
             }
             catch (Exception ex)

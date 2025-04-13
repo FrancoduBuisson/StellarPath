@@ -20,8 +20,8 @@ public static class UserEndpoints
         userGroup.MapGet("/", GetAllUsers)
             .WithName("GetAllUsers")
             .Produces<IEnumerable<UserDto>>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .RequireAuthorization("Admin");
+            .Produces(StatusCodes.Status401Unauthorized);
+            //.RequireAuthorization("Admin");
 
         userGroup.MapGet("/{googleId}", GetUserById)
             .WithName("GetUserById")
@@ -56,21 +56,18 @@ public static class UserEndpoints
         return app;
     }
 
-    private static async Task<IResult> GetCurrentUser(ClaimsPrincipal user, IUserService userService)
+    private static async Task<IResult> GetCurrentUser(IUserProvider userProvider, IUserService userService)
     {
-        var googleId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(googleId))
+        try
         {
-            return Results.Unauthorized();
+            var user = await userProvider.GetCurrentUserAsync();
+            return Results.Ok(user);
         }
-
-        var userDto = await userService.GetUserByGoogleIdAsync(googleId);
-        if (userDto == null)
+        catch (Exception ex) 
         {
-            return Results.NotFound();
-        }
-
-        return Results.Ok(userDto);
+            return Results.NotFound(ex.Message);
+        
+        }        
     }
 
     private static async Task<IResult> GetAllUsers(
