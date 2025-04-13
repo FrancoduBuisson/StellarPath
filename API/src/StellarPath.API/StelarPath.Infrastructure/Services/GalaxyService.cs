@@ -5,7 +5,7 @@ using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Models;
 
 namespace StelarPath.API.Infrastructure.Services;
-public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitOfWork) : IGalaxyService
+public class GalaxyService(IGalaxyRepository galaxyRepository, IStarSystemService starSystemService, IUnitOfWork unitOfWork) : IGalaxyService
 {
     public async Task<int> CreateGalaxyAsync(GalaxyDto galaxyDto)
     {
@@ -67,6 +67,13 @@ public class GalaxyService(IGalaxyRepository galaxyRepository, IUnitOfWork unitO
             }
 
             unitOfWork.BeginTransaction();
+
+            var starSystems = await starSystemService.GetStarSystemsByGalaxyIdAsync(id);
+
+            foreach (var starSystem in starSystems.Where(s => s.IsActive))
+            {
+                await starSystemService.DeactivateStarSystemAsync(starSystem.SystemId);
+            }
 
             galaxy.IsActive = false;
             var result = await galaxyRepository.UpdateAsync(galaxy);

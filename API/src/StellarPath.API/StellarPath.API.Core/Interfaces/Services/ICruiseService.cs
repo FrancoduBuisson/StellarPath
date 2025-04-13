@@ -13,6 +13,7 @@ public interface ICruiseService
     Task<IEnumerable<CruiseDto>> GetCruisesCreatedByUserAsync(string googleId);
     Task<IEnumerable<int>> GetAvailableSeatsForCruiseAsync(int cruiseId);
     Task<int> CreateCruiseAsync(CreateCruiseDto cruiseDto, string createdByGoogleId);
+    Task<int> CancelCruisesBySpaceshipIdAsync(int spaceshipId);
     Task<bool> CancelCruiseAsync(int id);
     Task<bool> UpdateCruiseStatusesAsync();
     Task<IEnumerable<CruiseDto>> SearchCruisesAsync(

@@ -3,54 +3,25 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
-public class GalaxyCommandHandler
+public class GalaxyCommandHandler : CommandHandlerBase<Galaxy>
 {
-    private readonly CommandContext _context;
     private readonly GalaxyService _galaxyService;
 
     public GalaxyCommandHandler(CommandContext context, GalaxyService galaxyService)
+        : base(context)
     {
-        _context = context;
         _galaxyService = galaxyService;
     }
 
-    public async Task HandleAsync()
-    {
-        var options = new List<string>
-        {
-            "List All Galaxies",
-            "List Active Galaxies",
-            "View Galaxy Details",
-            "Search Galaxies"
-        };
+    protected override string GetMenuTitle() => "Galaxy Management";
+    protected override string GetEntityName() => "Galaxy";
+    protected override string GetEntityNamePlural() => "Galaxies";
 
-        if (_context.CurrentUser?.Role == "Admin")
-        {
-            options.AddRange(new[]
-            {
-                "Create New Galaxy",
-                "Update Galaxy",
-                "Activate Galaxy",
-                "Deactivate Galaxy"
-            });
-        }
-
-        options.Add("Back to Main Menu");
-
-        var selection = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Galaxy Management")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(options));
-
-        await ProcessSelectionAsync(selection);
-    }
-
-    private async Task ProcessSelectionAsync(string selection)
+    protected override async Task ProcessSelectionAsync(string selection)
     {
         switch (selection)
         {
@@ -85,205 +56,145 @@ public class GalaxyCommandHandler
 
     private async Task ListAllGalaxiesAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching galaxies...", async ctx =>
-            {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
-                DisplayGalaxies(galaxies, "All Galaxies");
-            });
+        await ExecuteWithSpinnerAsync("Fetching galaxies...", async ctx =>
+        {
+            var galaxies = await _galaxyService.GetAllAsync();
+            DisplayEntities(galaxies, "All Galaxies");
+            return true;
+        });
     }
 
     private async Task ListActiveGalaxiesAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching active galaxies...", async ctx =>
-            {
-                var galaxies = await _galaxyService.GetActiveGalaxiesAsync();
-                DisplayGalaxies(galaxies, "Active Galaxies");
-            });
+        await ExecuteWithSpinnerAsync("Fetching active galaxies...", async ctx =>
+        {
+            var galaxies = await _galaxyService.GetActiveAsync();
+            DisplayEntities(galaxies, "Active Galaxies");
+            return true;
+        });
     }
 
     private async Task ViewGalaxyDetailsAsync()
     {
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching galaxies for selection...", async ctx =>
-            {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
+        var galaxy = await FetchAndPromptForEntitySelectionAsync(
+            _galaxyService,
+            service => service.GetAllAsync(),
+            g => g.GalaxyName,
+            g => g.GalaxyId,
+            "Fetching galaxies for selection...",
+            "No galaxies found.",
+            "Select a galaxy to view details");
 
-                if (!galaxies.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No galaxies found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a galaxy to view details");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-        if (!allGalaxies.Any())
+        if (galaxy != null)
         {
-            return;
-        }
-
-        var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a galaxy to view details")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
-
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
+            await ExecuteWithSpinnerAsync($"Fetching details for galaxy ID {galaxy.GalaxyId}...", async ctx =>
             {
-                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-
-                if (galaxy != null)
+                var fetchedGalaxy = await _galaxyService.GetByIdAsync(galaxy.GalaxyId);
+                if (fetchedGalaxy != null)
                 {
-                    DisplayGalaxyDetails(galaxy);
+                    DisplayEntityDetails(fetchedGalaxy);
                 }
+                return true;
             });
+        }
     }
 
-    private async Task SearchGalaxiesAsync()
+   private async Task SearchGalaxiesAsync()
+{
+    var searchCriteria = new GalaxySearchCriteria();
+
+    InputHelper.CollectSearchCriteria<GalaxySearchCriteria>(
+        "name",
+        criteria => criteria.Name = InputHelper.AskForString("Enter galaxy name (or part of name):"),
+        searchCriteria);
+
+    var statusOptions = new List<string> { "All Galaxies", "Active Only", "Inactive Only" };
+    var statusSelection = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("[cyan]Select active status filter[/]")
+            .PageSize(10)
+            .AddChoices(statusOptions));
+
+    switch (statusSelection)
     {
-        var searchCriteria = new GalaxySearchCriteria();
-
-        var includeName = AnsiConsole.Confirm("Do you want to search by name?", false);
-        if (includeName)
-        {
-            searchCriteria.Name = AnsiConsole.Ask<string>("Enter galaxy name (or part of name):");
-        }
-
-        var includeStatus = AnsiConsole.Confirm("Do you want to filter by active status?", false);
-        if (includeStatus)
-        {
-            searchCriteria.IsActive = AnsiConsole.Confirm("Show only active galaxies?");
-        }
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Searching galaxies...", async ctx =>
-            {
-                var galaxies = await _galaxyService.SearchGalaxiesAsync(searchCriteria);
-
-                string title = "Search Results for Galaxies";
-                if (!string.IsNullOrEmpty(searchCriteria.Name))
-                {
-                    title += $" containing '{searchCriteria.Name}'";
-                }
-                if (searchCriteria.IsActive.HasValue)
-                {
-                    title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-                }
-
-                DisplayGalaxies(galaxies, title);
-            });
+        case "Active Only":
+            searchCriteria.IsActive = true;
+            break;
+        case "Inactive Only":
+            searchCriteria.IsActive = false;
+            break;
+        case "All Galaxies":
+        default:
+            searchCriteria.IsActive = null;
+            break;
     }
+
+    await ExecuteWithSpinnerAsync("Searching galaxies...", async ctx =>
+    {
+        var galaxies = await _galaxyService.SearchGalaxiesAsync(searchCriteria);
+
+        var title = new StringBuilder("[bold blue]Search Results for Galaxies[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.Name))
+        {
+            title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+        }
+        if (searchCriteria.IsActive.HasValue)
+        {
+            title.Append($" ([yellow]Status[/]: [green]{(searchCriteria.IsActive.Value ? "Active" : "Inactive")}[/])");
+        }
+
+        DisplayEntities(galaxies, title.ToString());
+        return true;
+    });
+}
 
     private async Task CreateGalaxyAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to create galaxies.[/]");
             return;
         }
 
         var newGalaxy = new Galaxy
         {
-            GalaxyName = AnsiConsole.Ask<string>("Enter galaxy name:"),
-            IsActive = AnsiConsole.Confirm("Should this galaxy be active?", true)
+            GalaxyName = InputHelper.AskForString("Enter galaxy name:"),
+            IsActive = InputHelper.AskForConfirmation("Should this galaxy be active?", true)
         };
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Creating galaxy...", async ctx =>
+        await ExecuteWithSpinnerAsync("Creating galaxy...", async ctx =>
+        {
+            var result = await _galaxyService.CreateAsync(newGalaxy);
+
+            if (result.HasValue)
             {
-                var result = await _galaxyService.CreateGalaxyAsync(newGalaxy);
+                AnsiConsole.MarkupLine($"[green]Galaxy created successfully with ID: {result.Value}[/]");
 
-                if (result.HasValue)
+                var galaxy = await _galaxyService.GetByIdAsync(result.Value);
+                if (galaxy != null)
                 {
-                    AnsiConsole.MarkupLine($"[green]Galaxy created successfully with ID: {result.Value}[/]");
-
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(result.Value);
-                    if (galaxy != null)
-                    {
-                        DisplayGalaxyDetails(galaxy);
-                    }
+                    DisplayEntityDetails(galaxy);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task UpdateGalaxyAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
-        {
-            AnsiConsole.MarkupLine("[red]You don't have permission to update galaxies.[/]");
-            return;
-        }
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching galaxies for selection...", async ctx =>
-            {
-                var galaxies = await _galaxyService.GetAllGalaxiesAsync();
-
-                if (!galaxies.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No galaxies found to update.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a galaxy to update");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-        if (!allGalaxies.Any())
+        if (!EnsureAdminPermission())
         {
             return;
         }
 
-        var galaxyNames = allGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a galaxy to update")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
+        var galaxy = await FetchAndPromptForEntitySelectionAsync(
+            _galaxyService,
+            service => service.GetAllAsync(),
+            g => g.GalaxyName,
+            g => g.GalaxyId,
+            "Fetching galaxies for selection...",
+            "No galaxies found to update.",
+            "Select a galaxy to update");
 
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
-
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Fetching details for galaxy ID {galaxyId}...", async ctx =>
-            {
-                var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-
-                if (galaxy == null)
-                {
-                    return;
-                }
-
-                ctx.Status("Update galaxy details");
-            });
-
-        var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
         if (galaxy == null)
         {
             return;
@@ -293,156 +204,122 @@ public class GalaxyCommandHandler
         AnsiConsole.MarkupLine($"Current Name: [yellow]{galaxy.GalaxyName}[/]");
         AnsiConsole.MarkupLine($"Current Status: [yellow]{(galaxy.IsActive ? "Active" : "Inactive")}[/]");
 
-        galaxy.GalaxyName = AnsiConsole.Ask("Enter new name:", galaxy.GalaxyName);
-        galaxy.IsActive = AnsiConsole.Confirm("Should this galaxy be active?", galaxy.IsActive);
+        galaxy.GalaxyName = InputHelper.AskForString("Enter new name:", galaxy.GalaxyName);
+        galaxy.IsActive = InputHelper.AskForConfirmation("Should this galaxy be active?", galaxy.IsActive);
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Updating galaxy...", async ctx =>
+        await ExecuteWithSpinnerAsync("Updating galaxy...", async ctx =>
+        {
+            var result = await _galaxyService.UpdateAsync(galaxy, galaxy.GalaxyId);
+
+            if (result)
             {
-                var result = await _galaxyService.UpdateGalaxyAsync(galaxy);
+                AnsiConsole.MarkupLine("[green]Galaxy updated successfully![/]");
 
-                if (result)
+                var updatedGalaxy = await _galaxyService.GetByIdAsync(galaxy.GalaxyId);
+                if (updatedGalaxy != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Galaxy updated successfully![/]");
-
-                    var updatedGalaxy = await _galaxyService.GetGalaxyByIdAsync(galaxy.GalaxyId);
-                    if (updatedGalaxy != null)
-                    {
-                        DisplayGalaxyDetails(updatedGalaxy);
-                    }
+                    DisplayEntityDetails(updatedGalaxy);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task ActivateGalaxyAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to activate galaxies.[/]");
             return;
         }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching inactive galaxies...", async ctx =>
-            {
-                var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
-                var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
+        var allGalaxies = await ExecuteWithSpinnerAsync(
+            "Fetching inactive galaxies...",
+            async ctx => await _galaxyService.GetAllAsync());
 
-                if (!inactiveGalaxies.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No inactive galaxies found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a galaxy to activate");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var allGalaxies = await _galaxyService.GetAllGalaxiesAsync();
         var inactiveGalaxies = allGalaxies.Where(g => !g.IsActive).ToList();
 
         if (!inactiveGalaxies.Any())
         {
+            AnsiConsole.MarkupLine("[yellow]No inactive galaxies found.[/]");
             return;
         }
 
-        var galaxyNames = inactiveGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a galaxy to activate")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
+        var selectedGalaxy = SelectionHelper.SelectFromListById(
+            inactiveGalaxies,
+            g => g.GalaxyId,
+            g => g.GalaxyName,
+            "Select a galaxy to activate");
 
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+        if (selectedGalaxy == null)
+        {
+            return;
+        }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Activating galaxy ID {galaxyId}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Activating galaxy ID {selectedGalaxy.GalaxyId}...", async ctx =>
+        {
+            var result = await _galaxyService.ActivateAsync(selectedGalaxy.GalaxyId);
+
+            if (result)
             {
-                var result = await _galaxyService.ActivateGalaxyAsync(galaxyId);
+                AnsiConsole.MarkupLine("[green]Galaxy activated successfully![/]");
 
-                if (result)
+                var galaxy = await _galaxyService.GetByIdAsync(selectedGalaxy.GalaxyId);
+                if (galaxy != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Galaxy activated successfully![/]");
-
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                    if (galaxy != null)
-                    {
-                        DisplayGalaxyDetails(galaxy);
-                    }
+                    DisplayEntityDetails(galaxy);
                 }
-            });
+            }
+            return true;
+        });
     }
 
     private async Task DeactivateGalaxyAsync()
     {
-        if (_context.CurrentUser?.Role != "Admin")
+        if (!EnsureAdminPermission())
         {
-            AnsiConsole.MarkupLine("[red]You don't have permission to deactivate galaxies.[/]");
             return;
         }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync("Fetching active galaxies...", async ctx =>
-            {
-                var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
-
-                if (!activeGalaxies.Any())
-                {
-                    AnsiConsole.MarkupLine("[yellow]No active galaxies found.[/]");
-                    return;
-                }
-
-                ctx.Status("Select a galaxy to deactivate");
-                ctx.Spinner(Spinner.Known.Dots);
-            });
-
-        var activeGalaxies = await _galaxyService.GetActiveGalaxiesAsync();
+        var activeGalaxies = await ExecuteWithSpinnerAsync(
+            "Fetching active galaxies...",
+            async ctx => await _galaxyService.GetActiveAsync());
 
         if (!activeGalaxies.Any())
         {
+            AnsiConsole.MarkupLine("[yellow]No active galaxies found.[/]");
             return;
         }
 
-        var galaxyNames = activeGalaxies.Select(g => $"{g.GalaxyId}: {g.GalaxyName}").ToList();
-        var selectedGalaxyName = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("Select a galaxy to deactivate")
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(galaxyNames));
+        var selectedGalaxy = SelectionHelper.SelectFromListById(
+            activeGalaxies,
+            g => g.GalaxyId,
+            g => g.GalaxyName,
+            "Select a galaxy to deactivate");
 
-        int galaxyId = int.Parse(selectedGalaxyName.Split(':')[0].Trim());
+        if (selectedGalaxy == null)
+        {
+            return;
+        }
 
-        await AnsiConsole.Status()
-            .Spinner(Spinner.Known.Star)
-            .SpinnerStyle("green")
-            .StartAsync($"Deactivating galaxy ID {galaxyId}...", async ctx =>
+        await ExecuteWithSpinnerAsync($"Deactivating galaxy ID {selectedGalaxy.GalaxyId}...", async ctx =>
+        {
+            var result = await _galaxyService.DeactivateAsync(selectedGalaxy.GalaxyId);
+
+            if (result)
             {
-                var result = await _galaxyService.DeactivateGalaxyAsync(galaxyId);
+                AnsiConsole.MarkupLine("[green]Galaxy deactivated successfully![/]");
 
-                if (result)
+                var galaxy = await _galaxyService.GetByIdAsync(selectedGalaxy.GalaxyId);
+                if (galaxy != null)
                 {
-                    AnsiConsole.MarkupLine("[green]Galaxy deactivated successfully![/]");
-
-                    var galaxy = await _galaxyService.GetGalaxyByIdAsync(galaxyId);
-                    if (galaxy != null)
-                    {
-                        DisplayGalaxyDetails(galaxy);
-                    }
+                    DisplayEntityDetails(galaxy);
                 }
-            });
+            }
+            return true;
+        });
     }
 
-    private void DisplayGalaxies(IEnumerable<Galaxy> galaxies, string title)
+    protected override void DisplayEntities(IEnumerable<Galaxy> galaxies, string title)
     {
         var galaxyList = galaxies.ToList();
 
@@ -458,7 +335,7 @@ public class GalaxyCommandHandler
         DisplayHelper.DisplayTable(title, columns, rows);
     }
 
-    private void DisplayGalaxyDetails(Galaxy galaxy)
+    protected override void DisplayEntityDetails(Galaxy galaxy)
     {
         var details = new Dictionary<string, string>
         {

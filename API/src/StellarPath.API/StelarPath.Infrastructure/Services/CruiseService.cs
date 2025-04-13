@@ -271,6 +271,43 @@ public class CruiseService(
         }
     }
 
+    public async Task<int> CancelCruisesBySpaceshipIdAsync(int spaceshipId)
+    {
+        try
+        {
+            int scheduledStatusId = await cruiseStatusService.GetScheduledStatusIdAsync();
+            int cancelledStatusId = await cruiseStatusService.GetCancelledStatusIdAsync();
+
+            var scheduledCruises = await cruiseRepository.GetCruisesBySpaceshipIdAsync(spaceshipId);
+            scheduledCruises = scheduledCruises.Where(c => c.CruiseStatusId == scheduledStatusId).ToList();
+
+            if (!scheduledCruises.Any())
+            {
+                return 0;
+            }
+
+            unitOfWork.BeginTransaction();
+
+            int cancelledCount = 0;
+            foreach (var cruise in scheduledCruises)
+            {
+                bool success = await cruiseRepository.UpdateCruiseStatusAsync(cruise.CruiseId, cancelledStatusId);
+                if (success)
+                {
+                    cancelledCount++;
+                }
+            }
+
+            unitOfWork.Commit();
+            return cancelledCount;
+        }
+        catch
+        {
+            unitOfWork.Rollback();
+            throw;
+        }
+    }
+
     private async Task<CruiseDto> MapToDtoWithDetailsAsync(Cruise cruise)
     {
         // Rrlated things

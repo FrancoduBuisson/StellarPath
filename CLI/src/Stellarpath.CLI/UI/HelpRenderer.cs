@@ -1,4 +1,5 @@
 ﻿using Spectre.Console;
+using Stellarpath.CLI.Core;
 
 namespace Stellarpath.CLI.UI;
 
@@ -6,37 +7,24 @@ public static class HelpRenderer
 {
     public static void ShowHelp()
     {
+        var categoryDescriptions = CommandMenuStructure.GetCategoryDescriptions();
+
         var table = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(Color.Blue)
-            .Title("[bold blue]Available Commands[/]")
-            .AddColumn(new TableColumn("[u]Command[/]").Width(15))
+            .Title("[bold blue]StellarPath CLI - Main Menu Categories[/]")
+            .AddColumn(new TableColumn("[u]Category[/]").Width(20))
             .AddColumn(new TableColumn("[u]Description[/]"));
 
-        table.AddRow(
-            "[green]help[/]",
-            "Show this help message"
-        );
+        foreach (var category in categoryDescriptions)
+        {
+            table.AddRow(
+                $"[green]{category.Key}[/]",
+                category.Value
+            );
+        }
 
-        table.AddRow(
-            "[green]whoami[/]",
-            "Show logged-in user info"
-        );
-
-        table.AddRow(
-            "[green]galaxies[/]",
-            "Manage galaxies (view, search, create, update, activate/deactivate)"
-        );
-
-        table.AddRow(
-            "[green]logout[/]",
-            "Logout of current session"
-        );
-
-        table.AddRow(
-            "[green]exit[/] or [green]quit[/]",
-            "Exit the CLI"
-        );
+        table.Caption("Use arrow keys to navigate, Enter to select, and Escape to go back.");
 
         AnsiConsole.Write(table);
     }
