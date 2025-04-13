@@ -17,4 +17,7 @@ public interface IBookingService
     Task<bool> PayForBookingAsync(int id, string googleId);
     Task<IEnumerable<int>> GetAvailableSeatsForCruiseAsync(int cruiseId);
     Task<int> CancelBookingsForCruiseAsync(int cruiseId);
+    Task<IEnumerable<BookingDto>> SearchBookingsAsync(SearchBookingsDto searchParams);
+    Task<IEnumerable<BookingHistoryDto>> SearchBookingHistoryAsync(SearchBookingHistoryDto searchParams);
+
 }

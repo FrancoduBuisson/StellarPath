@@ -66,6 +66,20 @@ public static class BookingEndpoints
             .Produces(StatusCodes.Status500InternalServerError)
             .RequireAuthorization();
 
+        bookingGroup.MapGet("/search", SearchBookings)
+           .WithName("SearchBookings")
+           .Produces<IEnumerable<BookingDto>>(StatusCodes.Status200OK)
+           .Produces(StatusCodes.Status401Unauthorized)
+           .Produces(StatusCodes.Status500InternalServerError)
+           .RequireAuthorization("Admin");
+
+        bookingGroup.MapGet("/history/search", SearchBookingHistory)
+            .WithName("SearchBookingHistory")
+            .Produces<IEnumerable<BookingHistoryDto>>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status500InternalServerError)
+            .RequireAuthorization("Admin");
+
         return app;
     }
 
@@ -230,5 +244,55 @@ public static class BookingEndpoints
         {
             return Results.BadRequest(ex.Message);
         }
+    }
+
+    private static async Task<IResult> SearchBookings(
+    [FromQuery] string? googleId,
+    [FromQuery] int? cruiseId,
+    [FromQuery] int? bookingStatusId,
+    [FromQuery] string? statusName,
+    [FromQuery] DateTime? fromDate,
+    [FromQuery] DateTime? toDate,
+    [FromQuery] int? seatNumber,
+    IBookingService bookingService)
+    {
+        var searchParams = new SearchBookingsDto
+        {
+            GoogleId = googleId,
+            CruiseId = cruiseId,
+            BookingStatusId = bookingStatusId,
+            StatusName = statusName,
+            FromDate = fromDate,
+            ToDate = toDate,
+            SeatNumber = seatNumber
+        };
+
+        var bookings = await bookingService.SearchBookingsAsync(searchParams);
+        return Results.Ok(bookings);
+    }
+
+    private static async Task<IResult> SearchBookingHistory(
+        [FromQuery] int? bookingId,
+        [FromQuery] int? previousStatusId,
+        [FromQuery] int? newStatusId,
+        [FromQuery] string? previousStatusName,
+        [FromQuery] string? newStatusName,
+        [FromQuery] DateTime? fromDate,
+        [FromQuery] DateTime? toDate,
+        IBookingService bookingService)
+    {
+        var searchParams = new SearchBookingHistoryDto
+        {
+            BookingId = bookingId,
+            PreviousStatusId = previousStatusId,
+            NewStatusId = newStatusId,
+            PreviousStatusName = previousStatusName,
+            NewStatusName = newStatusName,
+            FromDate = fromDate,
+            ToDate = toDate
+        };
+
+        var history = await bookingService.SearchBookingHistoryAsync(searchParams);
+        return Results.Ok(history);
     }
 }

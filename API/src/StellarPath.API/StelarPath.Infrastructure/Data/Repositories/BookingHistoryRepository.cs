@@ -27,4 +27,56 @@ public class BookingHistoryRepository(IUnitOfWork unitOfWork) : Repository<Booki
     {
         return false;
     }
+
+    public async Task<IEnumerable<BookingHistory>> SearchBookingHistoryAsync(
+        int? bookingId,
+        int? previousStatusId,
+        int? newStatusId,
+        DateTime? fromDate,
+        DateTime? toDate)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (bookingId.HasValue)
+        {
+            conditions.Add("booking_id = @BookingId");
+            parameters.Add("BookingId", bookingId.Value);
+        }
+
+        if (previousStatusId.HasValue)
+        {
+            conditions.Add("previous_booking_status_id = @PreviousStatusId");
+            parameters.Add("PreviousStatusId", previousStatusId.Value);
+        }
+
+        if (newStatusId.HasValue)
+        {
+            conditions.Add("new_booking_status_id = @NewStatusId");
+            parameters.Add("NewStatusId", newStatusId.Value);
+        }
+
+        if (fromDate.HasValue)
+        {
+            conditions.Add("changed_at >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            conditions.Add("changed_at <= @ToDate");
+            parameters.Add("ToDate", toDate.Value);
+        }
+
+        var query = $"SELECT * FROM {TableName}";
+
+        if (conditions.Count > 0)
+        {
+            query += " WHERE " + string.Join(" AND ", conditions);
+        }
+
+        query += " ORDER BY changed_at DESC";
+
+        return await UnitOfWork.Connection.QueryAsync<BookingHistory>(query, parameters);
+    }
 }

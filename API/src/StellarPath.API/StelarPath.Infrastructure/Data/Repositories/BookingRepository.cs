@@ -67,4 +67,61 @@ public class BookingRepository(IUnitOfWork unitOfWork) : Repository<Booking>(uni
         var result = await UnitOfWork.Connection.ExecuteAsync(query, new { BookingId = bookingId, StatusId = statusId });
         return result > 0;
     }
+
+    public async Task<IEnumerable<Booking>> SearchBookingsAsync(
+        string? googleId,
+        int? cruiseId,
+        int? statusId,
+        DateTime? fromDate,
+        DateTime? toDate,
+        int? seatNumber)
+    {
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+
+        if (!string.IsNullOrEmpty(googleId))
+        {
+            conditions.Add("google_id = @GoogleId");
+            parameters.Add("GoogleId", googleId);
+        }
+
+        if (cruiseId.HasValue)
+        {
+            conditions.Add("cruise_id = @CruiseId");
+            parameters.Add("CruiseId", cruiseId.Value);
+        }
+
+        if (statusId.HasValue)
+        {
+            conditions.Add("booking_status_id = @StatusId");
+            parameters.Add("StatusId", statusId.Value);
+        }
+
+        if (fromDate.HasValue)
+        {
+            conditions.Add("booking_date >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            conditions.Add("booking_date <= @ToDate");
+            parameters.Add("ToDate", toDate.Value);
+        }
+
+        if (seatNumber.HasValue)
+        {
+            conditions.Add("seat_number = @SeatNumber");
+            parameters.Add("SeatNumber", seatNumber.Value);
+        }
+
+        var query = $"SELECT * FROM {TableName}";
+
+        if (conditions.Count > 0)
+        {
+            query += " WHERE " + string.Join(" AND ", conditions);
+        }
+
+        return await UnitOfWork.Connection.QueryAsync<Booking>(query, parameters);
+    }
 }

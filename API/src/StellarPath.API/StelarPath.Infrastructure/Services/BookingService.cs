@@ -3,6 +3,7 @@ using StellarPath.API.Core.Interfaces.Repositories;
 using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Interfaces;
 using StellarPath.API.Core.Models;
+using StelarPath.API.Infrastructure.Data.Repositories;
 
 namespace StelarPath.API.Infrastructure.Services;
 
@@ -13,6 +14,7 @@ public class BookingService(
     ICruiseService cruiseService,
     ISpaceshipService spaceshipService,
     IUserService userService,
+    IBookingStatusRepository bookingStatusRepository,
     IUnitOfWork unitOfWork) : IBookingService
 {
     private static readonly TimeSpan ReservationExpirationTime = TimeSpan.FromMinutes(30);
@@ -359,5 +361,90 @@ public class BookingService(
         {
             unitOfWork.Rollback();
         }
+    }
+
+    public async Task<IEnumerable<BookingDto>> SearchBookingsAsync(SearchBookingsDto searchParams)
+    {
+        int? statusId = null;
+
+        if (!string.IsNullOrEmpty(searchParams.StatusName))
+        {
+            var status = await bookingStatusRepository.GetByNameAsync(searchParams.StatusName);
+            statusId = status?.BookingStatusId;
+        }
+        else if (searchParams.BookingStatusId.HasValue)
+        {
+            statusId = searchParams.BookingStatusId;
+        }
+
+        var bookings = await bookingRepository.SearchBookingsAsync(
+            searchParams.GoogleId,
+            searchParams.CruiseId,
+            statusId,
+            searchParams.FromDate,
+            searchParams.ToDate,
+            searchParams.SeatNumber);
+
+        var bookingDtos = new List<BookingDto>();
+
+        foreach (var booking in bookings)
+        {
+            var dto = await MapToDtoWithDetailsAsync(booking);
+            bookingDtos.Add(dto);
+        }
+
+        return bookingDtos;
+    }
+
+    public async Task<IEnumerable<BookingHistoryDto>> SearchBookingHistoryAsync(SearchBookingHistoryDto searchParams)
+    {
+        int? previousStatusId = null;
+        int? newStatusId = null;
+
+        if (!string.IsNullOrEmpty(searchParams.PreviousStatusName))
+        {
+            var status = await bookingStatusRepository.GetByNameAsync(searchParams.PreviousStatusName);
+            previousStatusId = status?.BookingStatusId;
+        }
+        else if (searchParams.PreviousStatusId.HasValue)
+        {
+            previousStatusId = searchParams.PreviousStatusId;
+        }
+
+        if (!string.IsNullOrEmpty(searchParams.NewStatusName))
+        {
+            var status = await bookingStatusRepository.GetByNameAsync(searchParams.NewStatusName);
+            newStatusId = status?.BookingStatusId;
+        }
+        else if (searchParams.NewStatusId.HasValue)
+        {
+            newStatusId = searchParams.NewStatusId;
+        }
+
+        var historyItems = await bookingHistoryRepository.SearchBookingHistoryAsync(
+            searchParams.BookingId,
+            previousStatusId,
+            newStatusId,
+            searchParams.FromDate,
+            searchParams.ToDate);
+
+        var historyDtos = new List<BookingHistoryDto>();
+
+        foreach (var item in historyItems)
+        {
+            var previousStatus = await bookingStatusService.GetStatusNameByIdAsync(item.PreviousBookingStatusId);
+            var newStatus = await bookingStatusService.GetStatusNameByIdAsync(item.NewBookingStatusId);
+
+            historyDtos.Add(new BookingHistoryDto
+            {
+                HistoryId = item.HistoryId,
+                BookingId = item.BookingId,
+                PreviousStatus = previousStatus,
+                NewStatus = newStatus,
+                ChangedAt = item.ChangedAt
+            });
+        }
+
+        return historyDtos;
     }
 }
