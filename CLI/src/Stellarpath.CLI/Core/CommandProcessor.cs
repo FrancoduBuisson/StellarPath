@@ -17,7 +17,9 @@ public class CommandProcessor
     private readonly SpaceshipService _spaceshipService;
     private readonly CruiseService _cruiseService;
     private readonly UserService _userService;
+    private readonly BookingService _bookingService;
 
+    private readonly BookingCommandHandler _bookingCommandHandler;
     private readonly GalaxyCommandHandler _galaxyCommandHandler;
     private readonly StarSystemCommandHandler _starSystemCommandHandler;
     private readonly DestinationCommandHandler _destinationCommandHandler;
@@ -38,7 +40,9 @@ public class CommandProcessor
         _spaceshipService = new SpaceshipService(context);
         _cruiseService = new CruiseService(context);
         _userService = new UserService(context);
+        _bookingService = new BookingService(context);
 
+        _bookingCommandHandler = new BookingCommandHandler(context, _bookingService, _cruiseService, _userService);
         _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
         _starSystemCommandHandler = new StarSystemCommandHandler(context, _starSystemService, _galaxyService);
         _destinationCommandHandler = new DestinationCommandHandler(context, _destinationService, _starSystemService);
@@ -93,6 +97,9 @@ public class CommandProcessor
                 break;
             case CommandMenuStructure.CMD_SHIPMODELS:
                 await _shipModelCommandHandler.HandleAsync();
+                break;
+            case CommandMenuStructure.CMD_BOOKINGS:
+                await _bookingCommandHandler.HandleAsync();
                 break;
             case CommandMenuStructure.CMD_SPACESHIPS:
                 await _spaceshipCommandHandler.HandleAsync();

@@ -30,6 +30,7 @@ public static class CommandMenuStructure
     public const string CMD_LOGOUT = "logout";
     public const string CMD_EXIT = "exit";
     public const string CMD_CLEAR = "clear";
+    public const string CMD_BOOKINGS = "bookings";
 
     public static Dictionary<string, CommandCategory> GetCommandCategories(bool isAdmin)
     {
@@ -59,7 +60,8 @@ public static class CommandMenuStructure
                 Name = TRAVEL,
                 Commands = new List<string>
                 {
-                    CMD_CRUISES
+                    CMD_CRUISES,
+                    CMD_BOOKINGS
                 }
             },
             [ACCOUNT_SYSTEM] = new CommandCategory
@@ -103,11 +105,13 @@ public static class CommandMenuStructure
             [CMD_SHIPMODELS] = $"{actionWord} ship models",
             [CMD_SPACESHIPS] = $"{actionWord} spaceships",
             [CMD_CRUISES] = $"{actionWord} cruises",
+            [CMD_BOOKINGS] = $"{actionWord} bookings",
             [CMD_HELP] = "Show help",
             [CMD_WHOAMI] = "Show current user info",
             [CMD_USERS] = "Manage users",
             [CMD_LOGOUT] = "Logout from system",
             [CMD_EXIT] = "Exit application"
+
         };
     }
 
