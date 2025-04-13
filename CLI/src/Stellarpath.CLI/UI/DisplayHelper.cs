@@ -98,5 +98,5 @@ public static class DisplayHelper
         => dateTime.ToString("yyyy-MM-dd HH:mm");
 
     public static string FormatPrice(decimal price)
-        => $"[cyan]${price:N2}[/]";
+        => $"[cyan]{price:C2}[/]";
 }
