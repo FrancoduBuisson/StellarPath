@@ -6,7 +6,12 @@ using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Models;
 
 namespace StelarPath.API.Infrastructure.Services;
-public class DestinationService(IDestinationRepository destinationRepository, ICruiseStatusService cruiseStatusService, ICruiseRepository cruiseRepository, IStarSystemRepository starSystemRepository, IUnitOfWork unitOfWork) : IDestinationService
+public class DestinationService(IDestinationRepository destinationRepository,
+    ICruiseStatusService cruiseStatusService,
+    ICruiseRepository cruiseRepository,
+    IStarSystemRepository starSystemRepository,
+    IGalaxyRepository galaxyRepository,
+    IUnitOfWork unitOfWork) : IDestinationService
 {
     public async Task<int> CreateDestinationAsync(DestinationDto destinationDto)
     {
@@ -77,6 +82,18 @@ public class DestinationService(IDestinationRepository destinationRepository, IC
             if (destination == null)
             {
                 return false;
+            }
+
+            var starSystem = await starSystemRepository.GetByIdAsync(destination.SystemId);
+            if (starSystem == null || !starSystem.IsActive)
+            {
+                throw new InvalidOperationException("Cannot activate destination because its parent star system is inactive.");
+            }
+
+            var galaxy = await galaxyRepository.GetByIdAsync(starSystem.GalaxyId);
+            if (galaxy == null || !galaxy.IsActive)
+            {
+                throw new InvalidOperationException("Cannot activate destination because its parent star system is inactive.");
             }
 
             unitOfWork.BeginTransaction();
