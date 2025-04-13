@@ -40,11 +40,19 @@ class Program
 
                 if (categories.TryGetValue(selectedCategory, out var category))
                 {
-                    string selectedCommand = UiHelper.ShowCategoryMenu(selectedCategory, category, commandDescriptions);
 
-                    if (!string.IsNullOrEmpty(selectedCommand))
+                    if (category.Name == CommandMenuStructure.CLEAR)
                     {
-                        exitRequested = await processor.ProcessCommandAsync(selectedCommand);
+                        await processor.ProcessCommandAsync(category.Commands.First());
+                    }
+                    else
+                    {
+                        string selectedCommand = UiHelper.ShowCategoryMenu(selectedCategory, category, commandDescriptions);
+
+                        if (!string.IsNullOrEmpty(selectedCommand))
+                        {
+                            exitRequested = await processor.ProcessCommandAsync(selectedCommand);
+                        }
                     }
                 }
             }
