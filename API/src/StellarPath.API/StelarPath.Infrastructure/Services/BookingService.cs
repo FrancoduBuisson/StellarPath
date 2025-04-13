@@ -65,7 +65,7 @@ public class BookingService(
             var bookingHistory = new BookingHistory
             {
                 BookingId = bookingId,
-                PreviousBookingStatusId = 0, 
+                PreviousBookingStatusId = statusId, 
                 NewBookingStatusId = statusId,
                 ChangedAt = now
             };

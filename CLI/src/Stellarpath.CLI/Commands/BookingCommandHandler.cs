@@ -239,38 +239,44 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             SeatNumber = seatNumber
         };
 
-        await ExecuteWithSpinnerAsync("Creating your booking...", async ctx =>
+        int? bookingId = await ExecuteWithSpinnerAsync("Creating your booking...", async ctx =>
         {
-            var bookingId = await _bookingService.CreateBookingAsync(createBookingDto);
-            if (bookingId.HasValue)
+            return await _bookingService.CreateBookingAsync(createBookingDto);
+        });
+
+        if (bookingId.HasValue)
+        {
+            AnsiConsole.MarkupLine($"[green]Booking created successfully with ID: {bookingId.Value}[/]");
+            AnsiConsole.MarkupLine("[yellow]Note: Your reservation will expire in 30 minutes if not paid.[/]");
+
+            var booking = await ExecuteWithSpinnerAsync("Fetching booking details...", async ctx =>
+                await _bookingService.GetByIdAsync(bookingId.Value));
+
+            if (booking != null)
             {
-                AnsiConsole.MarkupLine($"[green]Booking created successfully with ID: {bookingId.Value}[/]");
-                AnsiConsole.MarkupLine("[yellow]Note: Your reservation will expire in 30 minutes if not paid.[/]");
+                DisplayEntityDetails(booking);
+            }
 
-                var booking = await _bookingService.GetByIdAsync(bookingId.Value);
-                if (booking != null)
-                {
-                    DisplayEntityDetails(booking);
-                }
+            var payNow = InputHelper.AskForConfirmation("Do you want to pay for this booking now?", true);
+            if (payNow)
+            {
+                var paymentSuccess = await ExecuteWithSpinnerAsync($"Processing payment for booking ID {bookingId.Value}...", async ctx =>
+                    await _bookingService.PayForBookingAsync(bookingId.Value));
 
-                var payNow = InputHelper.AskForConfirmation("Do you want to pay for this booking now?", true);
-                if (payNow)
+                if (paymentSuccess)
                 {
-                    var paymentSuccess = await _bookingService.PayForBookingAsync(bookingId.Value);
-                    if (paymentSuccess)
+                    AnsiConsole.MarkupLine("[green]Payment successful! Your booking is confirmed.[/]");
+
+                    var updatedBooking = await ExecuteWithSpinnerAsync("Fetching updated booking details...", async ctx =>
+                        await _bookingService.GetByIdAsync(bookingId.Value));
+
+                    if (updatedBooking != null)
                     {
-                        AnsiConsole.MarkupLine("[green]Payment successful! Your booking is confirmed.[/]");
-
-                        var updatedBooking = await _bookingService.GetByIdAsync(bookingId.Value);
-                        if (updatedBooking != null)
-                        {
-                            DisplayEntityDetails(updatedBooking);
-                        }
+                        DisplayEntityDetails(updatedBooking);
                     }
                 }
             }
-            return true;
-        });
+        }
     }
 
     private async Task SearchBookingsAsync()
