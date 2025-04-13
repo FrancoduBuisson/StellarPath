@@ -375,19 +375,27 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
 
         await ExecuteWithSpinnerAsync($"Activating destination ID {selectedDestination.DestinationId}...", async ctx =>
         {
-            var result = await _destinationService.ActivateAsync(selectedDestination.DestinationId);
+            try {
+                var result = await _destinationService.ActivateAsync(selectedDestination.DestinationId);
 
-            if (result)
-            {
-                AnsiConsole.MarkupLine("[green]Destination activated successfully![/]");
-
-                var destination = await _destinationService.GetByIdAsync(selectedDestination.DestinationId);
-                if (destination != null)
+                if (result)
                 {
-                    DisplayEntityDetails(destination);
+                    AnsiConsole.MarkupLine("[green]Destination activated successfully![/]");
+
+                    var destination = await _destinationService.GetByIdAsync(selectedDestination.DestinationId);
+                    if (destination != null)
+                    {
+                        DisplayEntityDetails(destination);
+                    }
                 }
+                return true;
+            }catch (HttpRequestException ex) when (ex.Message.Contains("400"))
+            {
+                AnsiConsole.MarkupLine("[red]Cannot activate this destination.[/]");
+                AnsiConsole.MarkupLine("[yellow]The parent star system or galaxy is inactive. Please activate the star system first.[/]");
+                return false;
             }
-            return true;
+            
         });
     }
 

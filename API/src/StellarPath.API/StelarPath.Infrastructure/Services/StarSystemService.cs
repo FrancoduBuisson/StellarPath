@@ -67,6 +67,12 @@ public class StarSystemService(IStarSystemRepository starSystemRepository, IGala
                 return false;
             }
 
+            var galaxy = await galaxyRepository.GetByIdAsync(starSystem.GalaxyId);
+            if (galaxy == null || !galaxy.IsActive)
+            {
+                throw new InvalidOperationException("Cannot activate star system because its parent galaxy is inactive.");
+            }
+
             unitOfWork.BeginTransaction();
 
             starSystem.IsActive = true;

@@ -350,18 +350,27 @@ public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
 
         await ExecuteWithSpinnerAsync($"Activating star system ID {selectedStarSystem.SystemId}...", async ctx =>
         {
-            var result = await _starSystemService.ActivateAsync(selectedStarSystem.SystemId);
-
-            if (result)
+            try
             {
-                AnsiConsole.MarkupLine("[green]Star system activated successfully![/]");
+                var result = await _starSystemService.ActivateAsync(selectedStarSystem.SystemId);
 
-                var starSystem = await _starSystemService.GetByIdAsync(selectedStarSystem.SystemId);
-                if (starSystem != null)
+                if (result)
                 {
-                    DisplayEntityDetails(starSystem);
+                    AnsiConsole.MarkupLine("[green]Star system activated successfully![/]");
+
+                    var starSystem = await _starSystemService.GetByIdAsync(selectedStarSystem.SystemId);
+                    if (starSystem != null)
+                    {
+                        DisplayEntityDetails(starSystem);
+                    }
                 }
             }
+            catch (HttpRequestException ex) when (ex.Message.Contains("400")){
+                AnsiConsole.MarkupLine("[red]Cannot activate this star system.[/]");
+                AnsiConsole.MarkupLine("[yellow]The parent galaxy is inactive. Please activate the galaxy first.[/]");
+                return false;
+            }
+            
             return true;
         });
     }
