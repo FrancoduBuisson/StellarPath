@@ -4,6 +4,7 @@ using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Interfaces;
 using StellarPath.API.Core.Models;
 using StelarPath.API.Infrastructure.Data.Repositories;
+using StelarPath.API.Infrastructure.Services;
 
 public class CruiseService(
    ICruiseRepository cruiseRepository,
@@ -11,6 +12,9 @@ public class CruiseService(
    IShipModelRepository shipModelRepository,
    IDestinationRepository destinationRepository,
    IUserRepository userRepository,
+   IBookingRepository bookingRepository,
+   IBookingHistoryRepository bookingHistoryRepository,
+   IBookingStatusService bookingStatusService,
    ICruiseStatusService cruiseStatusService,
    IUnitOfWork unitOfWork) : ICruiseService
 {
@@ -133,7 +137,6 @@ public class CruiseService(
                 return false;
             }
 
-            // only cancel Scheduled cruises
             int scheduledStatusId = await cruiseStatusService.GetScheduledStatusIdAsync();
             if (cruise.CruiseStatusId != scheduledStatusId)
             {
@@ -143,9 +146,33 @@ public class CruiseService(
             unitOfWork.BeginTransaction();
 
             int cancelledStatusId = await cruiseStatusService.GetCancelledStatusIdAsync();
+            int bookingCancelledStatusId = await bookingStatusService.GetCancelledStatusIdAsync();
+            int bookingCompletedStatusId = await bookingStatusService.GetCompletedStatusIdAsync();
             var result = await cruiseRepository.UpdateCruiseStatusAsync(id, cancelledStatusId);
 
-            // TODO: Need to canceld assoc bkings
+            if (result)
+            {
+                var bookings = await bookingRepository.GetBookingsByCruiseAsync(id);
+
+                var bookingsToCancel = bookings.Where(b =>
+                    b.BookingStatusId != bookingCancelledStatusId &&
+                    b.BookingStatusId != bookingCompletedStatusId).ToList();
+
+                foreach (var booking in bookingsToCancel)
+                {
+                    var bookingHistory = new BookingHistory
+                    {
+                        BookingId = booking.BookingId,
+                        PreviousBookingStatusId = booking.BookingStatusId,
+                        NewBookingStatusId = bookingCancelledStatusId,
+                        ChangedAt = DateTime.UtcNow
+                    };
+
+                    await bookingHistoryRepository.AddAsync(bookingHistory);
+
+                    await bookingRepository.UpdateBookingStatusAsync(booking.BookingId, bookingCancelledStatusId);
+                }
+            }
 
             unitOfWork.Commit();
             return result;
