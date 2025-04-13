@@ -79,22 +79,30 @@ public static class UiHelper
             new TextPrompt<string>($"{user?.FirstName ?? "Guest"}: ").PromptStyle("green"));
     }
 
-    public static void ShowUserInfo(UserInfo user)
+   public static void ShowUserInfo(UserInfo user)
+{
+    if (user == null)
     {
-        if (user == null)
-        {
-            AnsiConsole.MarkupLine("[red]No user information found.[/]");
-            return;
-        }
-
-        var table = new Table();
-        table.AddColumn("Field").AddColumn("Value");
-        table.AddRow("Name", $"{user.FirstName} {user.LastName}");
-        table.AddRow("Email", user.Email);
-        table.AddRow("Role", user.Role);
-        table.AddRow("Google ID", user.GoogleId);
-        table.AddRow("Active", user.IsActive ? "Yes" : "No");
-
-        AnsiConsole.Write(table);
+        AnsiConsole.MarkupLine("[red]No user information found.[/]");
+        return;
     }
+
+    var table = new Table();
+    
+    table.Border(TableBorder.Rounded);
+    table.Expand();
+    table.Title($"[bold blue]User Profile: {user.FirstName} {user.LastName}[/]");
+    
+    table.AddColumn(new TableColumn("[yellow]Field[/]"));
+    table.AddColumn(new TableColumn("[green]Value[/]"));
+    
+    table.AddRow("[grey]Name[/]", $"[white]{user.FirstName} {user.LastName}[/]");
+    table.AddRow("[grey]Email[/]", $"[white]{user.Email}[/]");
+    table.AddRow("[grey]Role[/]", $"[cyan]{user.Role}[/]");
+    table.AddRow("[grey]Google ID[/]", $"[white]{user.GoogleId}[/]");
+    table.AddRow("[grey]Active[/]", user.IsActive ? "[green]Yes[/]" : "[red]No[/]");
+
+    AnsiConsole.Write(table);
 }
+}
+

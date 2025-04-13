@@ -3,6 +3,7 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -111,85 +112,126 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
         }
     }
 
-    private async Task SearchDestinationsAsync()
+  private async Task SearchDestinationsAsync()
+{
+    var searchCriteria = new DestinationSearchCriteria();
+
+    var criteriaOptions = new List<string>
     {
-        var searchCriteria = new DestinationSearchCriteria();
+        "Name",
+        "Star System Filter",
+        "Distance from Earth",
+        "Active Status"
+    };
 
-        InputHelper.CollectSearchCriteria<DestinationSearchCriteria>(
-            "name",
-            criteria => criteria.Name = InputHelper.AskForString("Enter destination name (or part of name):"),
-            searchCriteria);
+    var selectedCriteria = AnsiConsole.Prompt(
+        new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select search criteria to include[/]")
+            .PageSize(10)
+            .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(criteriaOptions));
 
-        var includeSystem = InputHelper.AskForConfirmation("Do you want to filter by star system?", false);
-        if (includeSystem)
-        {
-            var bySystemId = InputHelper.AskForConfirmation("Search by system ID? (No = search by system name)", false);
-            if (bySystemId)
-            {
-                searchCriteria.SystemId = InputHelper.AskForInt("Enter star system ID:");
-            }
-            else
-            {
-                searchCriteria.SystemName = InputHelper.AskForString("Enter star system name (or part of name):");
-            }
-        }
-
-        var includeDistance = InputHelper.AskForConfirmation("Do you want to filter by distance from Earth?", false);
-        if (includeDistance)
-        {
-            var includeMinDistance = InputHelper.AskForConfirmation("Set minimum distance?", false);
-            if (includeMinDistance)
-            {
-                searchCriteria.MinDistance = InputHelper.AskForLong("Enter minimum distance from Earth (km):");
-            }
-
-            var includeMaxDistance = InputHelper.AskForConfirmation("Set maximum distance?", false);
-            if (includeMaxDistance)
-            {
-                searchCriteria.MaxDistance = InputHelper.AskForLong("Enter maximum distance from Earth (km):");
-            }
-        }
-
-        InputHelper.CollectSearchCriteria<DestinationSearchCriteria>(
-            "active status",
-            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active destinations?"),
-            searchCriteria);
-
-        await ExecuteWithSpinnerAsync("Searching destinations...", async ctx =>
-        {
-            var destinations = await _destinationService.SearchDestinationsAsync(searchCriteria);
-
-            string title = "Search Results for Destinations";
-            if (!string.IsNullOrEmpty(searchCriteria.Name))
-            {
-                title += $" containing '{searchCriteria.Name}'";
-            }
-            if (searchCriteria.SystemId.HasValue)
-            {
-                title += $" in star system ID {searchCriteria.SystemId.Value}";
-            }
-            if (!string.IsNullOrEmpty(searchCriteria.SystemName))
-            {
-                title += $" in star system '{searchCriteria.SystemName}'";
-            }
-            if (searchCriteria.MinDistance.HasValue)
-            {
-                title += $" min distance {searchCriteria.MinDistance.Value} km";
-            }
-            if (searchCriteria.MaxDistance.HasValue)
-            {
-                title += $" max distance {searchCriteria.MaxDistance.Value} km";
-            }
-            if (searchCriteria.IsActive.HasValue)
-            {
-                title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-            }
-
-            DisplayEntities(destinations, title);
-            return true;
-        });
+    if (selectedCriteria.Contains("Name"))
+    {
+        searchCriteria.Name = InputHelper.AskForString("[cyan]Enter destination name (or part of name):[/]");
     }
 
+    if (selectedCriteria.Contains("Star System Filter"))
+    {
+        var systemFilterOptions = new List<string>
+        {
+            "Search by System ID",
+            "Search by System Name"
+        };
+
+        var systemFilterChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by star system?[/]")
+                .PageSize(10)
+                .AddChoices(systemFilterOptions));
+
+        if (systemFilterChoice == "Search by System ID")
+        {
+            searchCriteria.SystemId = InputHelper.AskForInt("[cyan]Enter star system ID:[/]");
+        }
+        else
+        {
+            searchCriteria.SystemName = InputHelper.AskForString("[cyan]Enter star system name (or part of name):[/]");
+        }
+    }
+
+    if (selectedCriteria.Contains("Distance from Earth"))
+    {
+        var distanceOptions = new List<string>
+        {
+            "Set minimum distance",
+            "Set maximum distance",
+            "Set both minimum and maximum"
+        };
+
+        var distanceChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by distance?[/]")
+                .PageSize(10)
+                .AddChoices(distanceOptions));
+
+        if (distanceChoice == "Set minimum distance" || distanceChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MinDistance = InputHelper.AskForLong("[cyan]Enter minimum distance from Earth (km):[/]");
+        }
+
+        if (distanceChoice == "Set maximum distance" || distanceChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MaxDistance = InputHelper.AskForLong("[cyan]Enter maximum distance from Earth (km):[/]");
+        }
+    }
+
+    if (selectedCriteria.Contains("Active Status"))
+    {
+        var statusOptions = new List<string> { "All Destinations", "Active Only", "Inactive Only" };
+        var statusSelection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Select active status filter[/]")
+                .PageSize(10)
+                .AddChoices(statusOptions));
+
+        switch (statusSelection)
+        {
+            case "Active Only":
+                searchCriteria.IsActive = true;
+                break;
+            case "Inactive Only":
+                searchCriteria.IsActive = false;
+                break;
+            case "All Destinations":
+            default:
+                searchCriteria.IsActive = null;
+                break;
+        }
+    }
+
+    await ExecuteWithSpinnerAsync("Searching destinations...", async ctx =>
+    {
+        var destinations = await _destinationService.SearchDestinationsAsync(searchCriteria);
+
+        var title = new StringBuilder("[bold blue]Search Results for Destinations[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.Name))
+            title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+        if (searchCriteria.SystemId.HasValue)
+            title.Append($" in [yellow]star system ID[/] [green]{searchCriteria.SystemId.Value}[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.SystemName))
+            title.Append($" in [yellow]star system[/] '[green]{searchCriteria.SystemName}[/]'");
+        if (searchCriteria.MinDistance.HasValue)
+            title.Append($" with [yellow]min distance[/] [green]{searchCriteria.MinDistance.Value} km[/]");
+        if (searchCriteria.MaxDistance.HasValue)
+            title.Append($" with [yellow]max distance[/] [green]{searchCriteria.MaxDistance.Value} km[/]");
+        if (searchCriteria.IsActive.HasValue)
+            title.Append($" ([yellow]Status[/]: [green]{(searchCriteria.IsActive.Value ? "Active" : "Inactive")}[/])");
+
+        DisplayEntities(destinations, title.ToString());
+        return true;
+    });
+}
     private async Task ViewDestinationsByStarSystemAsync()
     {
         var starSystem = await FetchAndPromptForEntitySelectionAsync<StarSystemService, StarSystem>(

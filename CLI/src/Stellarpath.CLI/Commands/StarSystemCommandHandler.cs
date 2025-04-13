@@ -3,6 +3,7 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -111,62 +112,97 @@ public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
         }
     }
 
-    private async Task SearchStarSystemsAsync()
+   private async Task SearchStarSystemsAsync()
+{
+    var searchCriteria = new StarSystemSearchCriteria();
+
+    var criteriaOptions = new List<string>
     {
-        var searchCriteria = new StarSystemSearchCriteria();
+        "Name",
+        "Galaxy Filter",
+        "Active Status"
+    };
 
-        InputHelper.CollectSearchCriteria<StarSystemSearchCriteria>(
-            "name",
-            criteria => criteria.Name = InputHelper.AskForString("Enter star system name (or part of name):"),
-            searchCriteria);
+    var selectedCriteria = AnsiConsole.Prompt(
+        new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select search criteria to include[/]")
+            .PageSize(10)
+            .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(criteriaOptions));
 
-        var includeGalaxy = InputHelper.AskForConfirmation("Do you want to filter by galaxy?", false);
-        if (includeGalaxy)
-        {
-            var byGalaxyId = InputHelper.AskForConfirmation("Search by galaxy ID? (No = search by galaxy name)", false);
-            if (byGalaxyId)
-            {
-                searchCriteria.GalaxyId = InputHelper.AskForInt("Enter galaxy ID:");
-            }
-            else
-            {
-                searchCriteria.GalaxyName = InputHelper.AskForString("Enter galaxy name (or part of name):");
-            }
-        }
-
-        InputHelper.CollectSearchCriteria<StarSystemSearchCriteria>(
-            "active status",
-            criteria => criteria.IsActive = InputHelper.AskForConfirmation("Show only active star systems?"),
-            searchCriteria);
-
-        await ExecuteWithSpinnerAsync("Searching star systems...", async ctx =>
-        {
-            var starSystems = await _starSystemService.SearchStarSystemsAsync(searchCriteria);
-
-            string title = "Search Results for Star Systems";
-            if (!string.IsNullOrEmpty(searchCriteria.Name))
-            {
-                title += $" containing '{searchCriteria.Name}'";
-            }
-            if (searchCriteria.GalaxyId.HasValue)
-            {
-                title += $" in galaxy ID {searchCriteria.GalaxyId.Value}";
-            }
-            if (!string.IsNullOrEmpty(searchCriteria.GalaxyName))
-            {
-                title += $" in galaxy '{searchCriteria.GalaxyName}'";
-            }
-            if (searchCriteria.IsActive.HasValue)
-            {
-                title += $" (Status: {(searchCriteria.IsActive.Value ? "Active" : "Inactive")})";
-            }
-
-            DisplayEntities(starSystems, title);
-            return true;
-        });
+    if (selectedCriteria.Contains("Name"))
+    {
+        searchCriteria.Name = InputHelper.AskForString("[cyan]Enter star system name (or part of name):[/]");
     }
 
-    private async Task ViewStarSystemsByGalaxyAsync()
+    if (selectedCriteria.Contains("Galaxy Filter"))
+    {
+        var galaxyFilterOptions = new List<string>
+        {
+            "Search by Galaxy ID",
+            "Search by Galaxy Name"
+        };
+
+        var galaxyFilterChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by galaxy?[/]")
+                .PageSize(10)
+                .AddChoices(galaxyFilterOptions));
+
+        if (galaxyFilterChoice == "Search by Galaxy ID")
+        {
+            searchCriteria.GalaxyId = InputHelper.AskForInt("[cyan]Enter galaxy ID:[/]");
+        }
+        else
+        {
+            searchCriteria.GalaxyName = InputHelper.AskForString("[cyan]Enter galaxy name (or part of name):[/]");
+        }
+    }
+
+    if (selectedCriteria.Contains("Active Status"))
+    {
+        var statusOptions = new List<string> { "All Star Systems", "Active Only", "Inactive Only" };
+        var statusSelection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]Select active status filter[/]")
+                .PageSize(10)
+                .AddChoices(statusOptions));
+
+        switch (statusSelection)
+        {
+            case "Active Only":
+                searchCriteria.IsActive = true;
+                break;
+            case "Inactive Only":
+                searchCriteria.IsActive = false;
+                break;
+            case "All Star Systems":
+            default:
+                searchCriteria.IsActive = null;
+                break;
+        }
+    }
+
+    await ExecuteWithSpinnerAsync("Searching star systems...", async ctx =>
+    {
+        var starSystems = await _starSystemService.SearchStarSystemsAsync(searchCriteria);
+
+        var title = new StringBuilder("[bold blue]Search Results for Star Systems[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.Name))
+            title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+        if (searchCriteria.GalaxyId.HasValue)
+            title.Append($" in [yellow]galaxy ID[/] [green]{searchCriteria.GalaxyId.Value}[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.GalaxyName))
+            title.Append($" in [yellow]galaxy[/] '[green]{searchCriteria.GalaxyName}[/]'");
+        if (searchCriteria.IsActive.HasValue)
+            title.Append($" ([yellow]Status[/]: [green]{(searchCriteria.IsActive.Value ? "Active" : "Inactive")}[/])");
+
+        DisplayEntities(starSystems, title.ToString());
+        return true;
+    });
+}
+
+ private async Task ViewStarSystemsByGalaxyAsync()
     {
         var galaxy = await FetchAndPromptForEntitySelectionAsync(
             _galaxyService,
@@ -197,7 +233,6 @@ public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
             return;
         }
 
-        // First get active galaxies for selection
         var galaxies = await ExecuteWithSpinnerAsync(
             "Fetching active galaxies for selection...",
             async ctx => await _galaxyService.GetActiveAsync());
@@ -265,7 +300,6 @@ public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
             return;
         }
 
-        // Also fetch available galaxies
         var galaxies = await ExecuteWithSpinnerAsync(
             "Fetching galaxies...",
             async ctx => await _galaxyService.GetAllAsync());
