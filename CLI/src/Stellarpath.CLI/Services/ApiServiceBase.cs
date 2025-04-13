@@ -128,6 +128,11 @@ public abstract class ApiServiceBase<T> where T : class
         }
         catch (Exception ex)
         {
+            if (ex.Message.Contains("400"))
+            {
+                throw;
+            }
+
             AnsiConsole.MarkupLine($"[red]Error activating item: {ex.Message}[/]");
             return false;
         }
