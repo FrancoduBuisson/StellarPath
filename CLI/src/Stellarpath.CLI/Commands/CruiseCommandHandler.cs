@@ -554,7 +554,7 @@ public class CruiseCommandHandler : CommandHandlerBase<Cruise>
             departureTime = DateTime.Now.AddDays(1);
         }
 
-        var price = InputHelper.AskForDecimal("Enter seat price ($):", min: 1.0m);
+        var price = InputHelper.AskForDecimal("Enter seat price (R):", min: 1.0m);
 
         var newCruise = new CreateCruiseDto
         {
