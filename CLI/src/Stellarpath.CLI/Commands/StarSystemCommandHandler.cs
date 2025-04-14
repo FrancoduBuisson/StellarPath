@@ -333,6 +333,7 @@ public class StarSystemCommandHandler : CommandHandlerBase<StarSystem>
         }
 
         starSystem.IsActive = InputHelper.AskForConfirmation("Should this star system be active?", starSystem.IsActive);
+        
 
         await ExecuteWithSpinnerAsync("Updating star system...", async ctx =>
         {

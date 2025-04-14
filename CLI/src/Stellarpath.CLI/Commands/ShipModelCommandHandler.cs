@@ -3,6 +3,7 @@ using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
 using Stellarpath.CLI.UI;
+using System.Text;
 
 namespace Stellarpath.CLI.Commands;
 
@@ -99,77 +100,102 @@ public class ShipModelCommandHandler : CommandHandlerBase<ShipModel>
     }
 
     private async Task SearchShipModelsAsync()
+{
+    var searchCriteria = new ShipModelSearchCriteria();
+
+    var criteriaOptions = new List<string>
     {
-        var searchCriteria = new ShipModelSearchCriteria();
+        "Name",
+        "Passenger Capacity",
+        "Cruise Speed"
+    };
 
-        InputHelper.CollectSearchCriteria<ShipModelSearchCriteria>(
-            "name",
-            criteria => criteria.Name = InputHelper.AskForString("Enter ship model name (or part of name):"),
-            searchCriteria);
+    var selectedCriteria = AnsiConsole.Prompt(
+        new MultiSelectionPrompt<string>()
+            .Title("[yellow]Select search criteria to include[/]")
+            .PageSize(10)
+            .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
+            .AddChoices(criteriaOptions));
 
-        var includeCapacity = InputHelper.AskForConfirmation("Do you want to filter by passenger capacity?", false);
-        if (includeCapacity)
-        {
-            var includeMinCapacity = InputHelper.AskForConfirmation("Set minimum capacity?", false);
-            if (includeMinCapacity)
-            {
-                searchCriteria.MinCapacity = InputHelper.AskForInt("Enter minimum passenger capacity:", min: 1);
-            }
-
-            var includeMaxCapacity = InputHelper.AskForConfirmation("Set maximum capacity?", false);
-            if (includeMaxCapacity)
-            {
-                searchCriteria.MaxCapacity = InputHelper.AskForInt("Enter maximum passenger capacity:", min: searchCriteria.MinCapacity ?? 1);
-            }
-        }
-
-        var includeSpeed = InputHelper.AskForConfirmation("Do you want to filter by cruise speed?", false);
-        if (includeSpeed)
-        {
-            var includeMinSpeed = InputHelper.AskForConfirmation("Set minimum cruise speed?", false);
-            if (includeMinSpeed)
-            {
-                searchCriteria.MinSpeed = InputHelper.AskForInt("Enter minimum cruise speed (kmph):", min: 1);
-            }
-
-            var includeMaxSpeed = InputHelper.AskForConfirmation("Set maximum cruise speed?", false);
-            if (includeMaxSpeed)
-            {
-                searchCriteria.MaxSpeed = InputHelper.AskForInt("Enter maximum cruise speed (kmph):", min: searchCriteria.MinSpeed ?? 1);
-            }
-        }
-
-        await ExecuteWithSpinnerAsync("Searching ship models...", async ctx =>
-        {
-            var shipModels = await _shipModelService.SearchShipModelsAsync(searchCriteria);
-
-            string title = "Search Results for Ship Models";
-            if (!string.IsNullOrEmpty(searchCriteria.Name))
-            {
-                title += $" containing '{searchCriteria.Name}'";
-            }
-            if (searchCriteria.MinCapacity.HasValue)
-            {
-                title += $" with capacity ≥ {searchCriteria.MinCapacity.Value}";
-            }
-            if (searchCriteria.MaxCapacity.HasValue)
-            {
-                title += $" with capacity ≤ {searchCriteria.MaxCapacity.Value}";
-            }
-            if (searchCriteria.MinSpeed.HasValue)
-            {
-                title += $" with speed ≥ {searchCriteria.MinSpeed.Value} kmph";
-            }
-            if (searchCriteria.MaxSpeed.HasValue)
-            {
-                title += $" with speed ≤ {searchCriteria.MaxSpeed.Value} kmph";
-            }
-
-            DisplayEntities(shipModels, title);
-            return true;
-        });
+    if (selectedCriteria.Contains("Name"))
+    {
+        searchCriteria.Name = InputHelper.AskForString("[cyan]Enter ship model name (or part of name):[/]");
     }
 
+    if (selectedCriteria.Contains("Passenger Capacity"))
+    {
+        var capacityOptions = new List<string>
+        {
+            "Set minimum capacity",
+            "Set maximum capacity",
+            "Set both minimum and maximum"
+        };
+
+        var capacityChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by passenger capacity?[/]")
+                .PageSize(10)
+                .AddChoices(capacityOptions));
+
+        if (capacityChoice == "Set minimum capacity" || capacityChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MinCapacity = InputHelper.AskForInt("[cyan]Enter minimum passenger capacity:[/]", min: 1);
+        }
+
+        if (capacityChoice == "Set maximum capacity" || capacityChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MaxCapacity = InputHelper.AskForInt("[cyan]Enter maximum passenger capacity:[/]", 
+                min: searchCriteria.MinCapacity ?? 1);
+        }
+    }
+
+    if (selectedCriteria.Contains("Cruise Speed"))
+    {
+        var speedOptions = new List<string>
+        {
+            "Set minimum speed",
+            "Set maximum speed",
+            "Set both minimum and maximum"
+        };
+
+        var speedChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[cyan]How would you like to filter by cruise speed?[/]")
+                .PageSize(10)
+                .AddChoices(speedOptions));
+
+        if (speedChoice == "Set minimum speed" || speedChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MinSpeed = InputHelper.AskForInt("[cyan]Enter minimum cruise speed (kmph):[/]", min: 1);
+        }
+
+        if (speedChoice == "Set maximum speed" || speedChoice == "Set both minimum and maximum")
+        {
+            searchCriteria.MaxSpeed = InputHelper.AskForInt("[cyan]Enter maximum cruise speed (kmph):[/]", 
+                min: searchCriteria.MinSpeed ?? 1);
+        }
+    }
+
+    await ExecuteWithSpinnerAsync("Searching ship models...", async ctx =>
+    {
+        var shipModels = await _shipModelService.SearchShipModelsAsync(searchCriteria);
+
+        var title = new StringBuilder("[bold blue]Search Results for Ship Models[/]");
+        if (!string.IsNullOrEmpty(searchCriteria.Name))
+            title.Append($" with [yellow]name[/] containing '[green]{searchCriteria.Name}[/]'");
+        if (searchCriteria.MinCapacity.HasValue)
+            title.Append($" with [yellow]capacity ≥[/] [green]{searchCriteria.MinCapacity.Value}[/]");
+        if (searchCriteria.MaxCapacity.HasValue)
+            title.Append($" with [yellow]capacity ≤[/] [green]{searchCriteria.MaxCapacity.Value}[/]");
+        if (searchCriteria.MinSpeed.HasValue)
+            title.Append($" with [yellow]speed ≥[/] [green]{searchCriteria.MinSpeed.Value} kmph[/]");
+        if (searchCriteria.MaxSpeed.HasValue)
+            title.Append($" with [yellow]speed ≤[/] [green]{searchCriteria.MaxSpeed.Value} kmph[/]");
+
+        DisplayEntities(shipModels, title.ToString());
+        return true;
+    });
+}
     private async Task CreateShipModelAsync()
     {
         if (!EnsureAdminPermission())
