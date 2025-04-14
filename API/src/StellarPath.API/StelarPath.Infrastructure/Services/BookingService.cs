@@ -12,6 +12,7 @@ public class BookingService(
     IBookingHistoryRepository bookingHistoryRepository,
     IBookingStatusService bookingStatusService,
     ICruiseService cruiseService,
+    ICruiseRepository cruiseRepository,
     ISpaceshipService spaceshipService,
     IUserService userService,
     IBookingStatusRepository bookingStatusRepository,
@@ -232,16 +233,7 @@ public class BookingService(
             throw new ArgumentException($"Cruise with ID {cruiseId} not found");
         }
 
-        int capacity = cruise.Capacity ?? 0;
-
-        var bookings = await bookingRepository.GetActiveBookingsForCruiseAsync(cruiseId);
-
-        var allSeats = Enumerable.Range(1, capacity).ToHashSet();
-
-        foreach (var booking in bookings)
-        {
-            allSeats.Remove(booking.SeatNumber);
-        }
+        var allSeats = await cruiseRepository.GetAvailableSeatsAsync(cruiseId);
 
         return allSeats.ToList();
     }

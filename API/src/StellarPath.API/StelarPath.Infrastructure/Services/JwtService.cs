@@ -24,7 +24,7 @@ public class JwtService(IOptions<JWTSettings> options) : IJwtService
         }
         catch
         {
-            // need to still do these
+            return null;
         }
 
         return null;

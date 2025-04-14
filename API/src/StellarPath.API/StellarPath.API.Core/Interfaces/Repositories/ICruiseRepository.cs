@@ -20,4 +20,6 @@ public interface ICruiseRepository : IRepository<Cruise>
         decimal? maxPrice);
     Task<IEnumerable<Cruise>> GetOverlappingCruisesForSpaceshipAsync(int spaceshipId, DateTime startTime, DateTime endTime);
     Task<bool> UpdateCruiseStatusAsync(int cruiseId, int statusId);
+
+    Task<IEnumerable<int>> GetAvailableSeatsAsync(int cruiseId);
 }
