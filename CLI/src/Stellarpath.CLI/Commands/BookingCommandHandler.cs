@@ -166,8 +166,7 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             async ctx =>
             {
                 var scheduled = await _cruiseService.GetCruisesByStatusIdAsync(1);
-                var inProgress = await _cruiseService.GetCruisesByStatusIdAsync(2);
-                return scheduled.Concat(inProgress).ToList();
+                return scheduled.ToList();
             });
 
         if (!cruises.Any())
