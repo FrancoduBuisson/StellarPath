@@ -18,7 +18,7 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
+builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -77,5 +77,6 @@ app.RegisterSpaceshipEndpoints();
 app.RegisterCruiseEndpoints();
 app.RegisterBookingEndpoints();
 app.RegisterHealthCheckEndpoint();
+app.RegisterPlanetEndpoints();
 
 app.Run();
