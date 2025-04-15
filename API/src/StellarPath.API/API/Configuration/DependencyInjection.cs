@@ -11,6 +11,7 @@ using StellarPath.API.Core.Configuration;
 using StellarPath.API.Core.Interfaces;
 using StellarPath.API.Core.Interfaces.Repositories;
 using StellarPath.API.Core.Interfaces.Services;
+using StellarPath.API.Infrastructure.Services;
 
 namespace API.Configuration;
 public static class DependencyInjection
@@ -21,8 +22,10 @@ public static class DependencyInjection
 
         services.Configure<GoogleAuthSettings>(configuration.GetSection("GoogleAuth"));
         services.Configure<JWTSettings>(configuration.GetSection("Jwt"));
+        services.Configure<NasaSettings>(configuration.GetSection("NasaSettings"));
 
-        services.AddSingleton<IGoogleAuthService, GoogleAuthService>();
+
+    services.AddSingleton<IGoogleAuthService, GoogleAuthService>();
         services.AddSingleton<IJwtService, JwtService>();
 
         services.AddAuthorization(options =>
@@ -113,6 +116,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IBookingStatusService, BookingStatusService>();
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<INasaApodService, NasaApodService>();
     }
 
 }

@@ -2,6 +2,8 @@ using API.Configuration;
 using API.Endpoints;
 using API.Middleware;
 using Microsoft.OpenApi.Models;
+using StellarPath.API.Core.Interfaces.Services;
+using StellarPath.API.Infrastructure.Services;
 
 
 Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
@@ -51,6 +53,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.RegisterApplicationService(builder.Configuration);
 
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -78,5 +81,6 @@ app.RegisterCruiseEndpoints();
 app.RegisterBookingEndpoints();
 app.RegisterHealthCheckEndpoint();
 app.RegisterPlanetEndpoints();
+app.RegisterNasaEndpoints();
 
 app.Run();
