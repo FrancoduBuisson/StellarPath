@@ -6,32 +6,17 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using Stellarpath.CLI.Models;
+using Stellarpath.CLI.Core;
+using Spectre.Console.Cli;
+using CommandContext = Stellarpath.CLI.Core.CommandContext;
 
 namespace Stellarpath.CLI.Services
 {
-  public class ApodService
+  public class ApodService : ApiServiceBase<NasaApodResponse>
   {
-    private readonly HttpClient _httpClient;
-
-    public ApodService(HttpClient httpClient)
+    public ApodService(CommandContext context)
+        : base(context, "/api/nasa/apod")
     {
-      _httpClient = httpClient;
-    }
-
-    public async Task<NasaApodResponse?> GetApodAsync()
-    {
-      try
-      {
-        var response = await _httpClient.GetAsync("https://localhost:7029/api/nasa/apod");
-        if (!response.IsSuccessStatusCode) return null;
-
-        return await response.Content.ReadFromJsonAsync<NasaApodResponse>();
-      }
-      catch (Exception ex)
-      {
-        AnsiConsole.MarkupLine($"[red]Failed to retrieve APOD: {ex.Message}[/]");
-        return null;
-      }
     }
   }
 }
