@@ -62,6 +62,18 @@ resource "aws_ecs_task_definition" "api" {
           name      = "ConnectionStrings__DefaultConnection"
           valueFrom = aws_secretsmanager_secret.db_connection.arn
         },
+
+        {
+          name      = "Nasa_ApiKey"
+          valueFrom = aws_secretsmanager_secret.api_key_1.arn
+        },
+        {
+          name      = "PlanetsAPI_ApiKey"
+          valueFrom =  aws_secretsmanager_secret.api_key_2.arn
+          
+          
+
+        }
       ]
       logConfiguration = {
         logDriver = "awslogs",

@@ -52,3 +52,15 @@ variable "jwt_secret_key" {
   type        = string
   sensitive   = true
 }
+
+variable "api_key_1" {
+  description = "API key for first external service"
+  type        = string
+  sensitive   = true
+}
+
+variable "api_key_2" {
+  description = "API key for second external service"
+  type        = string
+  sensitive   = true
+}
