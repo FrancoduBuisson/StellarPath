@@ -40,3 +40,27 @@ variable "enable_dns_hostnames" {
   type        = bool
   description = "Enable DNS hostnames in VPC"
 }
+
+variable "google_client_id" {
+  description = "Google OAuth Client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "jwt_secret_key" {
+  description = "Secret key used for JWT token signing"
+  type        = string
+  sensitive   = true
+}
+
+variable "api_key_1" {
+  description = "API key for first external service"
+  type        = string
+  sensitive   = true
+}
+
+variable "api_key_2" {
+  description = "API key for second external service"
+  type        = string
+  sensitive   = true
+}

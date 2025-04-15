@@ -31,6 +31,30 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
+data "aws_iam_policy_document" "ecs_task_execution_policy" {
+  statement {
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "ssm:GetParameters",
+      "ssm:GetParameter"
+    ]
+    resources = [
+      aws_secretsmanager_secret.jwt_secret.arn,
+      aws_secretsmanager_secret.db_connection.arn,
+      aws_secretsmanager_secret.google_client_id.arn,
+      aws_secretsmanager_secret.api_key_1.arn,
+      aws_secretsmanager_secret.api_key_2.arn
+    ]
+  }
+}
+
+
+resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
+  name   = "${var.app_name}-task-execution-secrets-policy"
+  role   = aws_iam_role.ecs_task_execution.id
+  policy = data.aws_iam_policy_document.ecs_task_execution_policy.json
+}
+
 resource "aws_iam_role" "ecs_task_execution" {
   name = "${var.app_name}-ecs-task-execution-role"
 
