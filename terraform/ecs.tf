@@ -37,25 +37,25 @@ resource "aws_ecs_task_definition" "api" {
           value = "Development"
         },
         {
-          name  = "Jwt_ExpiryHours",
+          name  = "Jwt__ExpiryHours",
           value = "1"
         },
         {
-          name  = "Jwt_Issuer",
+          name  = "Jwt__Issuer",
           value = "StellarPathAPI"
         },
         {
-          name  = "Jwt_Audience",
+          name  = "Jwt__Audience",
           value = "StellarPathUser"
         }
       ]
       secrets = [
         {
-          name      = "GoogleAuth_ClientId"
+          name      = "GoogleAuth__ClientId"
           valueFrom = aws_ssm_parameter.google_client_id.arn
         },
         {
-          name      = "Jwt_SecretKey"
+          name      = "Jwt__SecretKey"
           valueFrom = aws_secretsmanager_secret.jwt_secret.arn
         },
         {
@@ -64,11 +64,11 @@ resource "aws_ecs_task_definition" "api" {
         },
 
         {
-          name      = "Nasa_ApiKey"
+          name      = "Nasa__ApiKey"
           valueFrom = aws_secretsmanager_secret.api_key_1.arn
         },
         {
-          name      = "PlanetsAPI_ApiKey"
+          name      = "PlanetsAPI__ApiKey"
           valueFrom =  aws_secretsmanager_secret.api_key_2.arn
           
           
