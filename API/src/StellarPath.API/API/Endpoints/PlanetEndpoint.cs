@@ -4,9 +4,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System;
 using StellarPath.API.Core.DTOs;
-using Amazon;
-using Amazon.SecretsManager;
-using Amazon.SecretsManager.Model;
+using Microsoft.Extensions.Configuration;
 
 namespace API.Endpoints;
 
@@ -17,20 +15,27 @@ public static class PlanetEndpoints
         var planetGroup = app.MapGroup("/api/planets")
             .WithTags("Planets");
 
-        planetGroup.MapGet("/details", GetPlanetDetails)
-            .WithName("GetPlanetDetails")
-            .Produces(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status500InternalServerError);
+        planetGroup.MapGet("/details", async (
+            [FromQuery] string name,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration) =>
+        {
+            return await GetPlanetDetails(name, httpClientFactory, configuration);
+        })
+        .WithName("GetPlanetDetails")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status500InternalServerError);
 
         return app;
     }
 
     private static async Task<IResult> GetPlanetDetails(
-        [FromQuery] string name,
-        IHttpClientFactory httpClientFactory)
+        string name,
+        IHttpClientFactory httpClientFactory,
+        IConfiguration configuration)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -39,10 +44,10 @@ public static class PlanetEndpoints
 
         try
         {
-            var apiKey = await GetSecretAsync("stellar-path-api/api-key-2-v2", "af-south-1");
+            var apiKey = configuration["PlanetsAPI:ApiKey"];
             if (string.IsNullOrEmpty(apiKey))
             {
-                return Results.Problem("API key could not be retrieved from AWS Secrets Manager", statusCode: 500);
+                return Results.Problem("API key is not configured", statusCode: 500);
             }
 
             var httpClient = httpClientFactory.CreateClient();
@@ -73,27 +78,6 @@ public static class PlanetEndpoints
         catch (Exception ex)
         {
             return Results.Problem($"Failed to fetch planet data: {ex.Message}", statusCode: 500);
-        }
-    }
-
-    private static async Task<string> GetSecretAsync(string secretName, string region)
-    {
-        IAmazonSecretsManager client = new AmazonSecretsManagerClient(RegionEndpoint.GetBySystemName(region));
-
-        GetSecretValueRequest request = new GetSecretValueRequest
-        {
-            SecretId = secretName,
-            VersionStage = "AWSCURRENT",
-        };
-
-        try
-        {
-            GetSecretValueResponse response = await client.GetSecretValueAsync(request);
-            return response.SecretString;
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("Error retrieving secret from AWS Secrets Manager", ex);
         }
     }
 }
