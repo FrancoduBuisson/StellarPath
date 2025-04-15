@@ -1,8 +1,11 @@
-resource "aws_ssm_parameter" "google_client_id" {
-  name        = "/${var.app_name}/google-client-id-v3"
+resource "aws_secretsmanager_secret" "google_client_id" {
+  name        = "${var.app_name}/google-client-id-v3"
   description = "Google OAuth Client ID"
-  type        = "SecureString"
-  value       = var.google_client_id
+}
+
+resource "aws_secretsmanager_secret_version" "google_client_id_version" {
+  secret_id     = aws_secretsmanager_secret.google_client_id.id
+  secret_string = var.google_client_id
 }
 
 resource "aws_secretsmanager_secret" "jwt_secret" {

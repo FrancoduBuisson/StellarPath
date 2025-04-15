@@ -52,7 +52,7 @@ resource "aws_ecs_task_definition" "api" {
       secrets = [
         {
           name      = "GoogleAuth__ClientId"
-          valueFrom = aws_ssm_parameter.google_client_id.arn
+          valueFrom = aws_secretsmanager_secret.google_client_id.arn
         },
         {
           name      = "Jwt__SecretKey"
