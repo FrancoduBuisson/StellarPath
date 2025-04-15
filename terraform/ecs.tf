@@ -19,28 +19,62 @@ resource "aws_ecs_task_definition" "api" {
   container_definitions = jsonencode([
     {
       name  = var.app_name
-      image = "${aws_ecr_repository.api.repository_url}:latest",
+      image = "${aws_ecr_repository.api.repository_url}:latest"
       portMappings = [
         {
           containerPort = 80,
           hostPort      = 80,
           protocol      = "tcp"
         }
-      ],
+      ]
       environment = [
         {
           name  = "ASPNETCORE_URLS",
           value = "http://+:80"
         },
         {
-          name  = "ConnectionStrings__DefaultConnection",
-          value = "Host=${aws_db_instance.postgres.address};Port=5432;Database=${var.db_name};Username=${var.db_username};Password=${var.db_password}"
-        },
-        {
           name  = "ASPNETCORE_ENVIRONMENT",
           value = "Development"
+        },
+        {
+          name  = "Jwt__ExpiryHours",
+          value = "1"
+        },
+        {
+          name  = "Jwt__Issuer",
+          value = "StellarPathAPI"
+        },
+        {
+          name  = "Jwt__Audience",
+          value = "StellarPathUser"
         }
-      ],
+      ]
+      secrets = [
+        {
+          name      = "GoogleAuth__ClientId"
+          valueFrom = aws_secretsmanager_secret.google_client_id.arn
+        },
+        {
+          name      = "Jwt__SecretKey"
+          valueFrom = aws_secretsmanager_secret.jwt_secret.arn
+        },
+        {
+          name      = "ConnectionStrings__DefaultConnection"
+          valueFrom = aws_secretsmanager_secret.db_connection.arn
+        },
+
+        {
+          name      = "Nasa__ApiKey"
+          valueFrom = aws_secretsmanager_secret.api_key_1.arn
+        },
+        {
+          name      = "PlanetsAPI__ApiKey"
+          valueFrom =  aws_secretsmanager_secret.api_key_2.arn
+          
+          
+
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs",
         options = {
@@ -48,7 +82,7 @@ resource "aws_ecs_task_definition" "api" {
           "awslogs-region"        = var.region,
           "awslogs-stream-prefix" = "ecs"
         }
-      },
+      }
       essential = true
     }
   ])
