@@ -20,6 +20,8 @@ public class AuthService
 
   public async Task LoginAsync()
   {
+    NasaApodResponse? apod = null;
+
     await AnsiConsole.Status()
         .Spinner(Spinner.Known.Star)
         .SpinnerStyle("green")
@@ -54,16 +56,7 @@ public class AuthService
             {
               var content = await response.Content.ReadAsStringAsync();
               var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-              var apod = JsonSerializer.Deserialize<NasaApodResponse>(content, options);
-
-              if (apod != null)
-              {
-                ApodDisplayHelper.ShowApod(apod);
-              }
-              else
-              {
-                AnsiConsole.MarkupLine("[yellow]Could not retrieve APOD.[/]");
-              }
+              apod = JsonSerializer.Deserialize<NasaApodResponse>(content, options);
             }
             else
             {
@@ -74,9 +67,18 @@ public class AuthService
           {
             AnsiConsole.MarkupLine($"[red]Error fetching APOD: {ex.Message}[/]");
           }
-
-          HelpRenderer.ShowHelp();
         });
+
+    if (apod != null)
+    {
+      ApodDisplayHelper.ShowApod(apod);
+    }
+    else
+    {
+      AnsiConsole.MarkupLine("[yellow]Could not retrieve APOD.[/]");
+    }
+
+    HelpRenderer.ShowHelp();
   }
 
   public void Logout()

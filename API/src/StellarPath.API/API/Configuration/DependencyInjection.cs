@@ -22,7 +22,7 @@ public static class DependencyInjection
 
         services.Configure<GoogleAuthSettings>(configuration.GetSection("GoogleAuth"));
         services.Configure<JWTSettings>(configuration.GetSection("Jwt"));
-        services.Configure<NasaSettings>(configuration.GetSection("NasaSettings"));
+        services.Configure<NasaSettings>(configuration.GetSection("Nasa"));
 
 
     services.AddSingleton<IGoogleAuthService, GoogleAuthService>();
