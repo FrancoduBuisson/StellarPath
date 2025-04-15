@@ -41,7 +41,7 @@ public class GoogleAuthService(IOptions<GoogleAuthSettings> options, HttpClient 
         {
             var settings = new GoogleJsonWebSignature.ValidationSettings
             {
-                Audience = new[] { options.Value.ClientId }
+                Audience = new[] { "834046723373-j2obq430fp7sfc538uk6m42o4rmbmgvf.apps.googleusercontent.com" }
             };
 
             var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
