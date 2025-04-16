@@ -212,6 +212,8 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             return;
         }
 
+        await DisplayVisualSeatMap(selectedCruise.CruiseId, selectedCruise.Capacity ?? 0);
+
         AnsiConsole.MarkupLine($"Price per seat: [cyan]{selectedCruise.CruiseSeatPrice:C2}[/]");
         var confirmBooking = InputHelper.AskForConfirmation("Do you want to proceed with booking?", true);
         if (!confirmBooking)
@@ -725,4 +727,52 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
 
         return $"{(int)timeSpan.TotalDays}d {timeSpan.Hours}h {timeSpan.Minutes}m";
     }
+
+    private async Task DisplayVisualSeatMap(int cruiseId, int capacity)
+    {
+        var availableSeats = await _bookingService.GetAvailableSeatsForCruiseAsync(cruiseId);
+        var allSeats = Enumerable.Range(1, capacity).ToList();
+
+        int columns = Math.Min(10, capacity);
+        int rows = (int)Math.Ceiling(capacity / (double)columns);
+
+        AnsiConsole.MarkupLine("[blue bold]Spaceship Seat Map[/]");
+        AnsiConsole.MarkupLine("[grey]Legend: [green]■[/] Available  [red]□[/] Occupied[/]");
+
+        var grid = new Grid();
+
+        for (int i = 0; i < columns; i++)
+        {
+            grid.AddColumn(new GridColumn().NoWrap().PadRight(1));
+        }
+
+        for (int rowIndex = 0; rowIndex < rows; rowIndex++)
+        {
+            var rowCells = new Markup[columns];
+
+            for (int colIndex = 0; colIndex < columns; colIndex++)
+            {
+                int seatNumber = rowIndex * columns + colIndex + 1;
+
+                if (seatNumber <= capacity)
+                {
+                    bool isAvailable = availableSeats.Contains(seatNumber);
+                    rowCells[colIndex] = new Markup(
+                        isAvailable
+                            ? $"[green]■[/] [green]{seatNumber,2}[/]"
+                            : $"[red]□[/] [grey]{seatNumber,2}[/]");
+                }
+                else
+                {
+                    rowCells[colIndex] = new Markup(" ");
+                }
+            }
+
+            grid.AddRow(rowCells);
+        }
+
+        AnsiConsole.Write(grid);
+        AnsiConsole.WriteLine();
+    }
+
 }

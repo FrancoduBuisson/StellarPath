@@ -18,6 +18,7 @@ public class CommandProcessor
     private readonly CruiseService _cruiseService;
     private readonly UserService _userService;
     private readonly BookingService _bookingService;
+    private readonly PlanetService _planetService;
 
     private readonly BookingCommandHandler _bookingCommandHandler;
     private readonly GalaxyCommandHandler _galaxyCommandHandler;
@@ -41,11 +42,13 @@ public class CommandProcessor
         _cruiseService = new CruiseService(context);
         _userService = new UserService(context);
         _bookingService = new BookingService(context);
+        _planetService = new PlanetService(context);
+
 
         _bookingCommandHandler = new BookingCommandHandler(context, _bookingService, _cruiseService, _userService);
         _galaxyCommandHandler = new GalaxyCommandHandler(context, _galaxyService);
         _starSystemCommandHandler = new StarSystemCommandHandler(context, _starSystemService, _galaxyService);
-        _destinationCommandHandler = new DestinationCommandHandler(context, _destinationService, _starSystemService);
+        _destinationCommandHandler = new DestinationCommandHandler(context,_planetService , _destinationService, _starSystemService);
         _shipModelCommandHandler = new ShipModelCommandHandler(context, _shipModelService);
         _spaceshipCommandHandler = new SpaceshipCommandHandler(context, _spaceshipService, _shipModelService);
         _cruiseCommandHandler = new CruiseCommandHandler(context, _cruiseService, _spaceshipService, _destinationService);
