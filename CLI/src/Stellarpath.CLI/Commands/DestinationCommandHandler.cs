@@ -581,8 +581,8 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
         
         [bold yellow]== Astronomical Details ==[/]
         
-        [bold cyan]Mass:[/] {planet.Mass:N2} Earth masses
-        [bold cyan]Radius:[/] {planet.Radius:N2} Earth radii
+        [bold cyan]Mass:[/] {planet.Mass:N5} Earth masses
+        [bold cyan]Radius:[/] {planet.Radius:N5} Earth radii
         [bold cyan]Orbital Period:[/] {planet.Period:N2} Earth days
         [bold cyan]Temperature:[/] {planet.Temperature:N2} K
         [bold cyan]Distance:[/] {planet.DistanceLightYear:N2} light years
