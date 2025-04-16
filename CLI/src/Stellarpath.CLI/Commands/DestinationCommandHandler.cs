@@ -11,12 +11,22 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
 {
     private readonly DestinationService _destinationService;
     private readonly StarSystemService _starSystemService;
+    private readonly PlanetService _planetService;
+    private DestinationService destinationService;
+    private StarSystemService starSystemService;
 
-    public DestinationCommandHandler(CommandContext context, DestinationService destinationService, StarSystemService starSystemService)
+    public DestinationCommandHandler(CommandContext context, PlanetService planetService, DestinationService destinationService, StarSystemService starSystemService)
         : base(context)
     {
         _destinationService = destinationService;
         _starSystemService = starSystemService;
+        _planetService = planetService;
+    }
+
+    public DestinationCommandHandler(CommandContext context, DestinationService destinationService, StarSystemService starSystemService) : base(context)
+    {
+        this.destinationService = destinationService;
+        this.starSystemService = starSystemService;
     }
 
     protected override string GetMenuTitle() => "Destination Management";
@@ -27,7 +37,9 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
     {
         return new List<string>
         {
-            "View Destinations by Star System"
+            "View Destinations by Star System",
+            "Learn About Destination"
+
         };
     }
 
@@ -61,6 +73,9 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
                 break;
             case "Deactivate Destination":
                 await DeactivateDestinationAsync();
+                break;
+            case "Learn About Destination":
+                await LearnAboutDestinationAsync();
                 break;
             case "Back to Main Menu":
                 return;
@@ -517,5 +532,76 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
         };
 
         DisplayHelper.DisplayDetails("Destination Details", details);
+    }
+
+    private async Task LearnAboutDestinationAsync()
+    {
+        var destinations = await ExecuteWithSpinnerAsync(
+            "Fetching destinations...",
+            async ctx => await _destinationService.GetAllAsync());
+
+        if (!destinations.Any())
+        {
+            AnsiConsole.MarkupLine("[yellow]No destinations found.[/]");
+            return;
+        }
+
+        var selectedDestination = SelectionHelper.SelectFromListById(
+            destinations,
+            d => d.DestinationId,
+            d => d.Name,
+            "Select a destination to learn more about");
+
+        if (selectedDestination == null)
+        {
+            return;
+        }
+
+        await ExecuteWithSpinnerAsync($"Searching astronomical database for '{selectedDestination.Name}'...", async ctx =>
+        {
+            var planetDetails = await _planetService.GetPlanetDetailsByNameAsync(selectedDestination.Name);
+
+            if (!planetDetails.Any())
+            {
+                AnsiConsole.MarkupLine($"[yellow]No astronomical data found for '{selectedDestination.Name}'.[/]");
+                return false;
+            }
+
+            DisplayPlanetDetails(planetDetails.First(), selectedDestination);
+            return true;
+        });
+    }
+
+    private void DisplayPlanetDetails(PlanetInformation planet, Destination destination)
+    {
+        var panel = new Panel($"""
+        [bold cyan]Destination:[/] {destination.Name}
+        [bold cyan]Star System:[/] {destination.SystemName}
+        [bold cyan]Distance from Earth:[/] {destination.DistanceFromEarth:N0} km
+        
+        [bold yellow]== Astronomical Details ==[/]
+        
+        [bold cyan]Mass:[/] {planet.Mass:N2} Earth masses
+        [bold cyan]Radius:[/] {planet.Radius:N2} Earth radii
+        [bold cyan]Orbital Period:[/] {planet.Period:N2} Earth days
+        [bold cyan]Temperature:[/] {planet.Temperature:N2} K
+        [bold cyan]Distance:[/] {planet.DistanceLightYear:N2} light years
+        
+        [bold cyan]Host Star Mass:[/] {planet.HostStarMass:N2} Solar masses
+        [bold cyan]Host Star Temperature:[/] {planet.HostStarTemperature:N2} K
+        
+        [bold yellow]== Travel Advisory ==[/]
+        Surface conditions and local regulatory requirements may vary. 
+        Please consult your travel agent for personalized recommendations.
+        """)
+        {
+            Header = new PanelHeader($"[bold blue]Planetary Profile: {destination.Name}[/]"),
+            Expand = true,
+            Border = BoxBorder.Rounded,
+            BorderStyle = new Style(Color.Green),
+            Padding = new Padding(2, 1, 2, 1)
+        };
+
+        AnsiConsole.Write(panel);
     }
 }
