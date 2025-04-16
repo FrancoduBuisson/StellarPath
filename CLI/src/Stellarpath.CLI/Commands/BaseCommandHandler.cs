@@ -96,30 +96,6 @@ public abstract class CommandHandlerBase<T> where T : class
             .StartAsync(statusMessage, action);
     }
 
-    protected async Task<T> PromptForEntitySelectionAsync(
-        IEnumerable<T> entities,
-        Func<T, string> displaySelector,
-        Func<T, int> idSelector,
-        string promptTitle)
-    {
-        var entityList = entities.ToList();
-        if (!entityList.Any())
-        {
-            return null;
-        }
-
-        var entityOptions = entityList.Select(e => $"{idSelector(e)}: {displaySelector(e)}").ToList();
-        var selectedOption = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title(promptTitle)
-                .PageSize(10)
-                .HighlightStyle(new Style(Color.Green))
-                .AddChoices(entityOptions));
-
-        int selectedId = int.Parse(selectedOption.Split(':')[0].Trim());
-        return entityList.FirstOrDefault(e => idSelector(e) == selectedId);
-    }
-
     protected async Task<TEntity> FetchAndPromptForEntitySelectionAsync<TService, TEntity>(
         TService service,
         Func<TService, Task<IEnumerable<TEntity>>> fetchMethod,
