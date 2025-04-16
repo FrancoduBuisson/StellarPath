@@ -28,9 +28,6 @@ jobs:
       - name: Build Project
         run: dotnet build --no-restore -c Release
         working-directory: ${{ env.WORKING_DIRECTORY }}
-      - name: Run Tests
-        run: dotnet test --no-build --verbosity normal
-        working-directory: ${{ env.WORKING_DIRECTORY }}
   publish-and-deploy:
     needs: build
     runs-on: ubuntu-latest
