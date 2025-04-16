@@ -160,13 +160,13 @@ private async Task SearchUsersAsync()
             searchCriteria.Name = InputHelper.AskForString("[cyan]Enter name to search for:[/]"),
 
         ["First Name"] = () =>
-            searchCriteria.FirstName = InputHelper.AskForString("[cyan]Enter first name:[/]"),
+            searchCriteria.FirstName = InputHelper.AskForString("[cyan]Enter first name:[/]", maxSize: 50),
 
         ["Last Name"] = () =>
-            searchCriteria.LastName = InputHelper.AskForString("[cyan]Enter last name:[/]"),
+            searchCriteria.LastName = InputHelper.AskForString("[cyan]Enter last name:[/]", maxSize: 50),
 
         ["Email"] = () =>
-            searchCriteria.Email = InputHelper.AskForString("[cyan]Enter email:[/]"),
+            searchCriteria.Email = InputHelper.AskForString("[cyan]Enter email:[/]", maxSize: 256),
 
         ["Role"] = () =>
             searchCriteria.Role = AnsiConsole.Prompt(
