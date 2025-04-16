@@ -7,7 +7,8 @@ public static class InputHelper
     public static string AskForString(
         string prompt,
         string defaultValue = null,
-        Func<string, ValidationResult> validator = null)
+        Func<string, ValidationResult> validator = null,
+        int maxSize = 100)
     {
         var textPrompt = new TextPrompt<string>(prompt);
 
@@ -17,6 +18,11 @@ public static class InputHelper
             prompt = $"{prompt} (default: {defaultValue})";
         }
 
+        textPrompt = textPrompt.Validate(value =>
+            value.Length > maxSize
+                ? ValidationResult.Error($"Input too large. Max size {maxSize} characters.")
+                : ValidationResult.Success());
+        
         if (validator != null)
         {
             textPrompt = textPrompt.Validate(validator);
