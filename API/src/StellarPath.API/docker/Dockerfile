@@ -9,7 +9,6 @@ WORKDIR /src
 COPY ["API/API.csproj", "API/"]
 COPY ["StellarPath.API.Core/StellarPath.API.Core.csproj", "StellarPath.API.Core/"]
 COPY ["StelarPath.Infrastructure/StelarPath.API.Infrastructure.csproj", "StelarPath.Infrastructure/"]
-COPY ["Tests/StellarPath.API.Tests.csproj", "Tests/"]
 RUN dotnet restore "API/API.csproj"
 
 COPY . .
