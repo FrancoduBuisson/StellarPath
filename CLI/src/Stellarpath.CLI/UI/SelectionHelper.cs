@@ -73,29 +73,4 @@ public static class SelectionHelper
         return itemList.FirstOrDefault(item => EqualityComparer<TId>.Default.Equals(idSelector(item), selectedId));
     }
 
-    public static List<T> MultiSelectFromList<T>(
-        IEnumerable<T> items,
-        Func<T, string> displaySelector,
-        string title,
-        int pageSize = 10)
-    {
-        var itemList = items.ToList();
-        if (!itemList.Any())
-        {
-            AnsiConsole.MarkupLine("[yellow]No items available for selection.[/]");
-            return new List<T>();
-        }
-
-        var options = itemList.Select(item => displaySelector(item)).ToList();
-        var selectedOptions = AnsiConsole.Prompt(
-            new MultiSelectionPrompt<string>()
-                .Title(title)
-                .PageSize(pageSize)
-                .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
-                .AddChoices(options));
-
-        return selectedOptions
-            .Select(option => itemList[options.IndexOf(option)])
-            .ToList();
-    }
 }

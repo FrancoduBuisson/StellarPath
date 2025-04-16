@@ -584,8 +584,8 @@ public class DestinationCommandHandler : CommandHandlerBase<Destination>
         [bold cyan]Mass:[/] {planet.Mass:N5} Earth masses
         [bold cyan]Radius:[/] {planet.Radius:N5} Earth radii
         [bold cyan]Orbital Period:[/] {planet.Period:N2} Earth days
-        [bold cyan]Temperature:[/] {planet.Temperature:N2} K
-        [bold cyan]Distance:[/] {planet.DistanceLightYear:N2} light years
+        [bold cyan]Temperature:[/] {planet.Temperature:N5} K
+        [bold cyan]Distance:[/] {planet.DistanceLightYear:N5} light years
         
         [bold cyan]Host Star Mass:[/] {planet.HostStarMass:N2} Solar masses
         [bold cyan]Host Star Temperature:[/] {planet.HostStarTemperature:N2} K
