@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StelarPath.API.Infrastructu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API", "API\API.csproj", "{CBE227FA-316A-478F-BA4E-E5B37F69F1F7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StellarPath.API.Tests", "Tests\StellarPath.API.Tests.csproj", "{0A814128-9A76-4CB0-8346-931EB7F3FFAE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,11 +29,16 @@ Global
 		{CBE227FA-316A-478F-BA4E-E5B37F69F1F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CBE227FA-316A-478F-BA4E-E5B37F69F1F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CBE227FA-316A-478F-BA4E-E5B37F69F1F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A814128-9A76-4CB0-8346-931EB7F3FFAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A814128-9A76-4CB0-8346-931EB7F3FFAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A814128-9A76-4CB0-8346-931EB7F3FFAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A814128-9A76-4CB0-8346-931EB7F3FFAE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		FileExplorer = db\|docker\
+		SolutionGuid = {535F4DAA-F6D5-4D30-A505-44584305BE80}
 	EndGlobalSection
 EndGlobal
