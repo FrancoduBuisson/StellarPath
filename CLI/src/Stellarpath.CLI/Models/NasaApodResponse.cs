@@ -16,7 +16,9 @@ namespace Stellarpath.CLI.Models
     public string Url { get; set; } = string.Empty;
 
     public string HdUrl { get; set; } = string.Empty;
+
     [JsonPropertyName("media_type")]
-    public string? MediaType { get; set; }
+    [JsonConverter(typeof(ApodMediaTypeConverter))]
+    public ApodMediaType MediaType { get; set; }
   }
 }
