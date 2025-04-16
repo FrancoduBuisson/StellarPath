@@ -1,0 +1,416 @@
+@startuml
+interface IGalaxyService {
+    +Task<GalaxyDto?> GetGalaxyByIdAsync(int id)
+    +Task<int> CreateGalaxyAsync(GalaxyDto galaxyDto)
+    +Task UpdateGalaxyAsync(GalaxyDto galaxyDto)
+    +Task DeactivateGalaxyAsync(int id)
+    +Task ActivateGalaxyAsync(int id)
+    +Task<IEnumerable<GalaxyDto>> GetAllGalaxiesAsync()
+    +Task<IEnumerable<GalaxyDto>> GetActiveGalaxiesAsync()
+    +Task<IEnumerable<GalaxyDto>> SearchGalaxiesAsync(string? name, bool? isActive)
+}
+
+class GalaxyDto {
+    +int GalaxyId
+    +string Name
+    +bool IsActive
+}
+
+class GalaxyEndpoints {
+    +WebApplication RegisterGalaxyEndpoints(WebApplication app)
+    -Task<IResult> GetGalaxyById(int id, IGalaxyService service)
+    -Task<IResult> CreateGalaxy(GalaxyDto dto, IGalaxyService service)
+    -Task<IResult> UpdateGalaxy(int id, GalaxyDto dto, IGalaxyService service)
+    -Task<IResult> DeactivateGalaxy(int id, IGalaxyService service)
+    -Task<IResult> ActivateGalaxy(int id, IGalaxyService service)
+    -Task<IResult> GetAllGalaxies(string? name, bool? isActive, IGalaxyService service)
+    -Task<IResult> GetActiveGalaxies(IGalaxyService service)
+}
+
+GalaxyEndpoints --> IGalaxyService
+GalaxyEndpoints --> GalaxyDto
+
+interface ICruiseService {
+    +Task<IEnumerable<CruiseDto>> GetAllCruisesAsync()
+    +Task<IEnumerable<CruiseDto>> SearchCruisesAsync(...)
+    +Task<CruiseDto?> GetCruiseByIdAsync(int id)
+    +Task<IEnumerable<CruiseDto>> GetCruisesBySpaceshipIdAsync(int id)
+    +Task<IEnumerable<CruiseDto>> GetCruisesByStatusAsync(int statusId)
+    +Task<IEnumerable<CruiseDto>> GetCruisesByDepartureDestinationAsync(int id)
+    +Task<IEnumerable<CruiseDto>> GetCruisesByArrivalDestinationAsync(int id)
+    +Task<IEnumerable<CruiseDto>> GetCruisesBetweenDatesAsync(DateTime, DateTime)
+    +Task<IEnumerable<CruiseDto>> GetCruisesCreatedByUserAsync(string userId)
+    +Task<int> CreateCruiseAsync(CreateCruiseDto dto, string userId)
+    +Task<bool> CancelCruiseAsync(int id)
+    +Task UpdateCruiseStatusesAsync()
+}
+
+interface ISpaceshipService {
+    +Task<SpaceshipDto?> GetSpaceshipByIdAsync(int id)
+}
+
+interface IDestinationService {
+    +Task<DestinationDto?> GetDestinationByIdAsync(int id)
+}
+
+class CruiseDto {
+    +int Id
+    +string Name
+    +DateTime DepartureDate
+    +string Status
+}
+
+class CreateCruiseDto {
+    +string Name
+    +int SpaceshipId
+    +int DepartureId
+    +int ArrivalId
+}
+
+class CruiseEndpoints {
+    +WebApplication RegisterCruiseEndpoints(WebApplication app)
+    -Task<IResult> GetAllCruises(...)
+    -Task<IResult> GetCruiseById(int id)
+    -Task<IResult> GetCruisesBySpaceshipId(int id)
+    -Task<IResult> GetCruisesByStatus(int statusId)
+    -Task<IResult> GetCruisesByDepartureDestination(int id)
+    -Task<IResult> GetCruisesByArrivalDestination(int id)
+    -Task<IResult> GetCruisesBetweenDates(DateTime, DateTime)
+    -Task<IResult> GetCruisesCreatedByCurrentUser(ClaimsPrincipal user)
+    -Task<IResult> CreateCruise(CreateCruiseDto dto, ClaimsPrincipal user)
+    -Task<IResult> CancelCruise(int id)
+    -Task<IResult> UpdateCruiseStatuses()
+}
+
+CruiseEndpoints --> ICruiseService
+CruiseEndpoints --> ISpaceshipService
+CruiseEndpoints --> IDestinationService
+CruiseEndpoints --> CruiseDto
+CruiseEndpoints --> CreateCruiseDto
+
+interface IDestinationService {
+    +Task<IEnumerable<DestinationDto>> GetAllDestinationsAsync()
+    +Task<IEnumerable<DestinationDto>> GetActiveDestinationsAsync()
+    +Task<DestinationDto?> GetDestinationByIdAsync(int id)
+    +Task<IEnumerable<DestinationDto>> GetDestinationsBySystemIdAsync(int systemId)
+    +Task<IEnumerable<DestinationDto>> SearchDestinationsAsync(string? name, int? systemId, string? systemName, long? minDistance, long? maxDistance, bool? isActive)
+    +Task<int> CreateDestinationAsync(DestinationDto dto)
+    +Task UpdateDestinationAsync(DestinationDto dto)
+    +Task DeactivateDestinationAsync(int id)
+    +Task ActivateDestinationAsync(int id)
+}
+
+interface IStarSystemService {
+    +Task<StarSystemDto?> GetStarSystemByIdAsync(int id)
+}
+
+class DestinationDto {
+    +int DestinationId
+    +string Name
+    +int SystemId
+    +bool IsActive
+}
+
+class DestinationEndpoints {
+    +WebApplication RegisterDestinationEndpoints(WebApplication app)
+    -Task<IResult> GetAllDestinations(...)
+    -Task<IResult> GetActiveDestinations()
+    -Task<IResult> GetDestinationById(int id)
+    -Task<IResult> GetDestinationsBySystemId(int systemId)
+    -Task<IResult> CreateDestination(DestinationDto dto)
+    -Task<IResult> UpdateDestination(int id, DestinationDto dto)
+    -Task<IResult> DeactivateDestination(int id)
+    -Task<IResult> ActivateDestination(int id)
+}
+
+DestinationEndpoints --> IDestinationService
+DestinationEndpoints --> IStarSystemService
+DestinationEndpoints --> DestinationDto
+
+class GoogleAuthRequestDto {
+    +string IdToken
+    +string AuthToken
+}
+
+class AuthResponseDto {
+    +string Token
+    +UserDto User
+}
+
+interface IGoogleAuthService {
+    +Task<GooglePayload?> VerifyGoogleTokenAsync(string idToken)
+    +Task<GoogleUserInfo?> GetGoogleUserInfoAsync(string authToken)
+}
+
+interface IUserService {
+    +Task<bool> UserExistsAsync(string googleId)
+    +Task CreateUserAsync(string googleId, string email, string firstName, string lastName)
+    +Task<UserDto?> GetUserByGoogleIdAsync(string googleId)
+}
+
+interface IJwtService {
+    +string GenerateToken(UserDto user, string idToken)
+    +string ExtractGoogleTokenFromJwt(string token)
+    +ClaimsPrincipal ValidateToken(string token)
+}
+
+class AuthEndpoints {
+    +WebApplication RegisterAuthEndpoints(WebApplication app)
+    -Task<IResult> AuthenticateWithGoogle(GoogleAuthRequestDto request)
+}
+
+AuthEndpoints --> GoogleAuthRequestDto
+AuthEndpoints --> AuthResponseDto
+AuthEndpoints --> IGoogleAuthService
+AuthEndpoints --> IUserService
+AuthEndpoints --> IJwtService
+
+class ShipModelDto {
+    +int ModelId
+    +string Name
+    +int Capacity
+    +int CruiseSpeedKmph
+}
+
+interface IShipModelService {
+    +Task<IEnumerable<ShipModelDto>> GetAllShipModelsAsync()
+    +Task<IEnumerable<ShipModelDto>> 
+    SearchShipModelsAsync(string? name, int? minCapacity, int? maxCapacity, int? minSpeed, int? maxSpeed)
+    +Task<ShipModelDto?> GetShipModelByIdAsync(int id)
+    +Task<int> CreateShipModelAsync(ShipModelDto dto)
+    +Task UpdateShipModelAsync(ShipModelDto dto)
+    +Task DeleteShipModelAsync(int id)
+}
+
+class ShipModelEndpoints {
+    +WebApplication RegisterShipModelEndpoints(WebApplication app)
+    -Task<IResult> GetAllShipModels(...)
+    -Task<IResult> GetShipModelById(int id)
+    -Task<IResult> CreateShipModel(ShipModelDto dto)
+    -Task<IResult> UpdateShipModel(int id, ShipModelDto dto)
+    -Task<IResult> DeleteShipModel(int id)
+}
+
+ShipModelEndpoints --> ShipModelDto
+ShipModelEndpoints --> IShipModelService
+
+class SpaceshipDto {
+    +int SpaceshipId
+    +string Name
+    +int ModelId
+    +bool IsActive
+}
+
+class SpaceshipAvailabilityDto {
+    +int SpaceshipId
+    +string Name
+    +DateTime AvailableFrom
+    +DateTime AvailableTo
+}
+
+interface ISpaceshipService {
+    +Task<IEnumerable<SpaceshipDto>> GetAllSpaceshipsAsync()
+    +Task<IEnumerable<SpaceshipDto>> SearchSpaceshipsAsync(int? modelId, string? modelName, bool? isActive)
+    +Task<SpaceshipDto?> GetSpaceshipByIdAsync(int id)
+    +Task<IEnumerable<SpaceshipDto>> GetSpaceshipsByModelIdAsync(int modelId)
+    +Task<IEnumerable<SpaceshipDto>> GetActiveSpaceshipsAsync()
+    +Task<IEnumerable<SpaceshipAvailabilityDto>> GetAvailableSpaceshipsForTimeRangeAsync(DateTime startTime, DateTime endTime)
+    +Task<int> CreateSpaceshipAsync(SpaceshipDto dto)
+    +Task UpdateSpaceshipAsync(SpaceshipDto dto)
+    +Task<(bool, int)> DeactivateSpaceshipAsync(int id, bool cancelCruises)
+    +Task ActivateSpaceshipAsync(int id)
+}
+
+interface IShipModelService {
+    +Task<ShipModelDto?> GetShipModelByIdAsync(int id)
+}
+
+class SpaceshipEndpoints {
+    +WebApplication RegisterSpaceshipEndpoints(WebApplication app)
+    - GetActiveSpaceships(spaceshipService: ISpaceshipService): Task<IResult>
+    - GetSpaceshipById(id: int, spaceshipService: ISpaceshipService): Task<IResult>
+    - GetSpaceshipsByModelId(modelId: int, spaceshipService: ISpaceshipService, shipModelService: IShipModelService): Task<IResult>
+    - GetAvailableSpaceshipsForTimeRange(startTime: DateTime, endTime: DateTime, spaceshipService: ISpaceshipService): Task<IResult>
+    - CreateSpaceship(spaceshipDto: SpaceshipDto, spaceshipService: ISpaceshipService, shipModelService: IShipModelService): Task<IResult>
+    - UpdateSpaceship(id: int, spaceshipDto: SpaceshipDto, spaceshipService: ISpaceshipService, shipModelService: IShipModelService): Task<IResult>
+    - DeactivateSpaceship(id: int, cancelCruises: bool, spaceshipService: ISpaceshipService): Task<IResult>
+    - ActivateSpaceship(id: int, spaceshipService: ISpaceshipService): Task<IResult>
+    - GetAllSpaceships(modelId: int?, modelName: string?, isActive: bool?, spaceshipService: ISpaceshipService): Task<IResult>
+
+}
+
+SpaceshipEndpoints --> SpaceshipDto
+SpaceshipEndpoints --> ISpaceshipService
+SpaceshipEndpoints --> IShipModelService
+ISpaceshipService --> SpaceshipDto
+ISpaceshipService --> SpaceshipAvailabilityDto
+
+class StarSystemDto {
+    +int SystemId
+    +string Name
+    +int GalaxyId
+    +bool IsActive
+}
+
+interface IStarSystemService {
+    +Task<IEnumerable<StarSystemDto>> GetAllStarSystemsAsync()
+    +Task<IEnumerable<StarSystemDto>> SearchStarSystemsAsync(string?, int?, string?, bool?)
+    +Task<IEnumerable<StarSystemDto>> GetActiveStarSystemsAsync()
+    +Task<StarSystemDto?> GetStarSystemByIdAsync(int id)
+    +Task<IEnumerable<StarSystemDto>> GetStarSystemsByGalaxyIdAsync(int galaxyId)
+    +Task<int> CreateStarSystemAsync(StarSystemDto dto)
+    +Task UpdateStarSystemAsync(StarSystemDto dto)
+    +Task DeactivateStarSystemAsync(int id)
+    +Task ActivateStarSystemAsync(int id)
+}
+
+interface IGalaxyService {
+    +Task<GalaxyDto?> GetGalaxyByIdAsync(int id)
+}
+
+class StarSystemEndpoints {
+    +WebApplication RegisterStarSystemEndpoints(WebApplication app)
+    - GetActiveStarSystems(starSystemService: IStarSystemService): Task<IResult>
+    - GetStarSystemById(id: int, starSystemService: IStarSystemService): Task<IResult>
+    - GetStarSystemsByGalaxyId(galaxyId: int, starSystemService: IStarSystemService, galaxyService: IGalaxyService): Task<IResult>
+    - CreateStarSystem(starSystemDto: StarSystemDto, starSystemService: IStarSystemService, galaxyService: IGalaxyService): Task<IResult>
+    - UpdateStarSystem(id: int, starSystemDto: StarSystemDto, starSystemService: IStarSystemService, galaxyService: IGalaxyService): Task<IResult>
+    - DeactivateStarSystem(id: int, starSystemService: IStarSystemService): Task<IResult>
+    - ActivateStarSystem(id: int, starSystemService: IStarSystemService): Task<IResult>
+    - GetAllStarSystems(name: string?, galaxyId: int?, galaxyName: string?, isActive: bool?, starSystemService: IStarSystemService): Task<IResult>
+
+}
+
+StarSystemEndpoints --> StarSystemDto
+StarSystemEndpoints --> IStarSystemService
+StarSystemEndpoints --> IGalaxyService
+IStarSystemService --> StarSystemDto
+
+' Interfaces
+interface IUserService {
+    +Task<UserDto?> GetUserByGoogleIdAsync(string googleId)
+    +Task<IEnumerable<UserDto>> GetAllUsersAsync()
+    +Task<IEnumerable<UserDto>> SearchUsersAsync(string?, string?, string?, string?, string?, bool?)
+    +Task DeactivateUserAsync(string googleId)
+    +Task ActivateUserAsync(string googleId)
+    +Task<bool> UpdateUserRoleAsync(string googleId, string roleName)
+}
+
+' DTOs
+class UserDto {
+    +string GoogleId
+    +string FirstName
+    +string LastName
+    +string Email
+    +string Role
+    +bool IsActive
+}
+
+class UpdateUserRoleDto {
+    +string RoleName
+}
+
+' Endpoint Class
+class UserEndpoints {
+    +WebApplication RegisterUserEndpoints(WebApplication app)
+    - GetCurrentUser(user: ClaimsPrincipal, userService: IUserService): Task<IResult>
+    - GetAllUsers(name: string?, firstName: string?, lastName: string?, email: string?, role: string?, isActive: bool?, userService: IUserService): Task<IResult>
+    - GetUserById(googleId: string, userService: IUserService): Task<IResult>
+    - DeactivateUser(googleId: string, user: ClaimsPrincipal, userService: IUserService): Task<IResult>
+    - ActivateUser(googleId: string, userService: IUserService): Task<IResult>
+    - UpdateUserRole(googleId: string, roleUpdate: UpdateUserRoleDto, user: ClaimsPrincipal, userService: IUserService): Task<IResult>
+
+}
+
+' Relationships
+UserEndpoints --> IUserService
+UserEndpoints --> UserDto
+UserEndpoints --> UpdateUserRoleDto
+
+' Existing Galaxy, Cruise, Destination, Auth, Spaceship, StarSystem, User definitions...
+
+' Booking-specific interfaces, DTOs, and endpoints
+interface IBookingService {
+    +Task<IEnumerable<BookingDto>> GetBookingsByUserAsync(string googleId)
+    +Task<BookingDto?> GetBookingByIdAsync(int id)
+    +Task<IEnumerable<BookingDto>> GetBookingsByCruiseAsync(int cruiseId)
+    +Task<IEnumerable<int>> GetAvailableSeatsForCruiseAsync(int cruiseId)
+    +Task<int> CreateBookingAsync(CreateBookingDto dto, string googleId)
+    +Task<bool> CancelBookingAsync(int id, string googleId)
+    +Task<bool> PayForBookingAsync(int id, string googleId)
+    +Task<IEnumerable<BookingDto>> SearchBookingsAsync(SearchBookingsDto dto)
+    +Task<IEnumerable<BookingHistoryDto>> SearchBookingHistoryAsync(SearchBookingHistoryDto dto)
+}
+
+class BookingDto {
+    + BookingId: int
+    + GoogleId: string
+    + UserName: string
+    + CruiseId: int
+    + DepartureDestination: string
+    + ArrivalDestination: string
+    + LocalDepartureTime: DateTime
+    + SeatNumber: int
+    + BookingDate: DateTime
+    + BookingExpiration: DateTime
+    + BookingStatusId: int
+    + BookingStatusName: string
+}
+
+class CreateBookingDto {
+    + CruiseId: int
+    + SeatNumber: int
+}
+
+class BookingHistoryDto {
+   
+    + HistoryId: int
+    + BookingId: int
+    + PreviousStatus: string 
+    + NewStatus: string
+    + ChangedAt: DateTime
+}
+
+class SearchBookingsDto {
+    +string? GoogleId
+    +int? CruiseId
+    +int? BookingStatusId
+    +string? StatusName
+    +DateTime? FromDate
+    +DateTime? ToDate
+    +int? SeatNumber
+}
+
+class SearchBookingHistoryDto {
+    +int? BookingId
+    +int? PreviousStatusId
+    +int? NewStatusId
+    +string? PreviousStatusName
+    +string? NewStatusName
+    +DateTime? FromDate
+    +DateTime? ToDate
+}
+
+class BookingEndpoints {
+    +WebApplication RegisterBookingEndpoints(WebApplication app)
+    - GetMyBookings(user: ClaimsPrincipal, bookingService: IBookingService): Task<IResult>
+    - GetBookingById(id: int, user: ClaimsPrincipal, bookingService: IBookingService): Task<IResult>
+    - GetBookingsByCruise(cruiseId: int, bookingService: IBookingService, cruiseService: ICruiseService): Task<IResult>
+    - GetAvailableSeats(cruiseId: int, bookingService: IBookingService, cruiseService: ICruiseService): Task<IResult>
+    - CreateBooking(bookingDto: CreateBookingDto, user: ClaimsPrincipal, bookingService: IBookingService): Task<IResult>
+    - CancelBooking(id: int, user: ClaimsPrincipal, bookingService: IBookingService): Task<IResult>
+    - PayForBooking(id: int, user: ClaimsPrincipal, bookingService: IBookingService): Task<IResult>
+    - SearchBookings(googleId: string?, cruiseId: int?, bookingStatusId: int?, statusName: string?, fromDate: DateTime?, toDate: DateTime?, seatNumber: int?, bookingService: IBookingService): Task<IResult>
+    - SearchBookingHistory(bookingId: int?, previousStatusId: int?, newStatusId: int?, previousStatusName: string?, newStatusName: string?, fromDate: DateTime?, toDate: DateTime?, bookingService: IBookingService): Task<IResult>
+
+}
+
+' Relationships for booking
+BookingEndpoints --> IBookingService
+BookingEndpoints --> ICruiseService
+BookingEndpoints --> BookingDto
+BookingEndpoints --> BookingHistoryDto
+BookingEndpoints --> CreateBookingDto
+BookingEndpoints --> SearchBookingsDto
+BookingEndpoints --> SearchBookingHistoryDto
+@enduml
