@@ -32,7 +32,7 @@ namespace Stellarpath.CLI.UI
 
       AnsiConsole.WriteLine();
 
-      if (apod.MediaType == "image")
+      if (apod.MediaType.IsImage)
       {
         var viewInBrowser = AnsiConsole.Confirm("Do you want to view the HD image in your browser?");
         if (viewInBrowser)
@@ -45,7 +45,7 @@ namespace Stellarpath.CLI.UI
           });
         }
       }
-      else if (apod.MediaType == "video")
+      else if (apod.MediaType.IsVideo)
       {
         AnsiConsole.MarkupLine("[yellow]Today's APOD is a video.[/]");
         var viewVideo = AnsiConsole.Confirm("Do you want to watch it in your browser?");
