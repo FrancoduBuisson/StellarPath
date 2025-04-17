@@ -223,40 +223,80 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
         }
 
         var availableSeatsArray = availableSeats.ToArray();
+
         var seatOptions = availableSeatsArray.Select(s => $"Seat {s}").ToList();
 
-        var selectedSeatOption = AnsiConsole.Prompt(
+        var numberOfBookings = InputHelper.AskForLong("How many bookings do you want to make?", 1, 1, availableSeatsArray.Length);
+
+        List<CreateBookingDto> allBookings = new List<CreateBookingDto>();
+
+        for (int i = 0; i < numberOfBookings; i++)
+        {
+
+            var selectedSeatOption = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("Select a seat")
+                .Title($"Select seat number {i + 1}")
                 .PageSize(10)
                 .HighlightStyle(new Style(Color.Green))
                 .AddChoices(seatOptions));
 
-        int seatNumber = int.Parse(selectedSeatOption.Replace("Seat ", ""));
+            seatOptions.Remove(selectedSeatOption);
 
-        var createBookingDto = new CreateBookingDto
-        {
-            CruiseId = selectedCruise.CruiseId,
-            SeatNumber = seatNumber
-        };
+            int seatNumber = int.Parse(selectedSeatOption.Replace("Seat ", ""));
 
-        int? bookingId = await ExecuteWithSpinnerAsync("Creating your booking...", async ctx =>
-        {
-            return await _bookingService.CreateBookingAsync(createBookingDto);
-        });
+            var createBookingDto = new CreateBookingDto
+            {
+                CruiseId = selectedCruise.CruiseId,
+                SeatNumber = seatNumber
+            };
 
-        if (bookingId.HasValue)
+            allBookings.Add(createBookingDto);
+        }
+
+        int? bookingId = null;
+        List<int>? bookingIds = new();
+
+        if (numberOfBookings == 1)
         {
-            AnsiConsole.MarkupLine($"[green]Booking created successfully with ID: {bookingId.Value}[/]");
+            bookingId = await ExecuteWithSpinnerAsync("Creating your booking...", async ctx =>
+            {
+
+                return await _bookingService.CreateBookingAsync(allBookings[0]);
+                ;
+            });
+        }
+
+        if (numberOfBookings > 1)
+        {
+            bookingIds = await ExecuteWithSpinnerAsync("Creating your bookings...", async ctx =>
+            {
+                return await _bookingService.CreateMultipleBookingAsync(allBookings)
+                ;
+            });
+
+        }
+
+
+        if (bookingId.HasValue || bookingIds.Count > 1)
+        {
+            AnsiConsole.MarkupLine($"[green]Booking{(bookingId.HasValue ? "" : "s")} created successfully with ID{(bookingId.HasValue ? "" : "s")}: {(bookingId.HasValue ? bookingId.Value : bookingIds.ToString())}[/]");
             AnsiConsole.MarkupLine("[yellow]Note: Your reservation will expire in 30 minutes if not paid.[/]");
 
-            var booking = await ExecuteWithSpinnerAsync("Fetching booking details...", async ctx =>
-                await _bookingService.GetByIdAsync(bookingId.Value));
-
-            if (booking != null)
+            for (int i = 0; i < numberOfBookings; i++)
             {
-                DisplayEntityDetails(booking);
+                var booking = await ExecuteWithSpinnerAsync("Fetching booking details...", async ctx =>
+                {
+                    int id = bookingId.HasValue ? bookingId.Value : bookingIds[i];
+                    return await _bookingService.GetByIdAsync(id);
+                });
+
+
+                if (booking != null)
+                {
+                    DisplayEntityDetails(booking);
+                }
             }
+
 
             var payNow = InputHelper.AskForConfirmation("Do you want to pay for this booking now?", true);
             if (payNow)

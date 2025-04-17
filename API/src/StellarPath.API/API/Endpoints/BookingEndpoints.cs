@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
+using StellarPath.API.Core.Models;
 using System.Security.Claims;
 
 namespace API.Endpoints;
@@ -47,6 +48,13 @@ public static class BookingEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status500InternalServerError)
             .RequireAuthorization();
+
+        bookingGroup.MapPost("/multi", CreateMultipleBookings)
+            .WithName("CreateMultipleBooking")
+            .Produces<int>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status500InternalServerError);
 
         bookingGroup.MapPatch("/{id}/cancel", CancelBooking)
             .WithName("CancelBooking")
@@ -184,6 +192,35 @@ public static class BookingEndpoints
         {
             return Results.BadRequest(ex.Message);
         }
+    }
+
+    private static async Task<IResult> CreateMultipleBookings(
+        [FromBody] List<CreateBookingDto> bookingsDto,
+        ClaimsPrincipal user,
+        IBookingService bookingService
+        )
+    {
+        var googleId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(googleId))
+        {
+            return Results.Unauthorized();
+        }
+
+        List<int> results = new();
+        try
+        {
+            foreach (var bookingDto in bookingsDto)
+            {
+                var bookingId = await bookingService.CreateBookingAsync(bookingDto, googleId);
+                results.Add(bookingId);
+            }
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(ex.Message);
+        }
+
+        return Results.Created($"/api/bookings/multi/", results.ToString());
     }
 
     private static async Task<IResult> CancelBooking(
