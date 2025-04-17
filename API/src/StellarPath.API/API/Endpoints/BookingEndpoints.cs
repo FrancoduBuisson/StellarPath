@@ -3,6 +3,7 @@ using StellarPath.API.Core.DTOs;
 using StellarPath.API.Core.Interfaces.Services;
 using StellarPath.API.Core.Models;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 
 namespace API.Endpoints;
 
@@ -220,7 +221,8 @@ public static class BookingEndpoints
             return Results.BadRequest(ex.Message);
         }
 
-        return Results.Created($"/api/bookings/multi/", results.ToString());
+        
+        return Results.Created($"/api/bookings/multi/", results);
     }
 
     private static async Task<IResult> CancelBooking(
