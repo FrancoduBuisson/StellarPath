@@ -93,6 +93,60 @@ public class BookingService : ApiServiceBase<Booking>
             return new List<int>();
         }
     }
+    public async Task<List<int>> CreateMultipleBookingAsync(List<CreateBookingDto> bookingDtos)
+    {
+        try
+        {
+            var content = JsonSerializer.Serialize(bookingDtos);
+            var stringContent = new StringContent(content, Encoding.UTF8, "application/json");
+
+            var response = await HttpClient.PostAsync($"{BaseUrl}/multi", stringContent);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                AnsiConsole.MarkupLine($"[yellow]Failed to create bookings: {errorContent}[/]");
+                return null;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                AnsiConsole.MarkupLine("[yellow]You must be logged in to create a booking.[/]");
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadAsStringAsync();
+
+            List<int> bookingIdList = new();
+
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                try
+                {
+                    var deserialized = JsonSerializer.Deserialize<List<int>>(result);
+                    if (deserialized != null)
+                    {
+                        bookingIdList = deserialized;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    return null;
+                }
+            }
+
+            return bookingIdList;
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Error creating booking: {ex.Message}[/]");
+            return null;
+        }
+    }
+
+
 
     public async Task<int?> CreateBookingAsync(CreateBookingDto bookingDto)
     {
