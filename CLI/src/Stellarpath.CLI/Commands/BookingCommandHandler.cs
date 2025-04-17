@@ -270,15 +270,14 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
         {
             bookingIds = await ExecuteWithSpinnerAsync("Creating your bookings...", async ctx =>
             {
-                return await _bookingService.CreateMultipleBookingAsync(allBookings)
-                ;
+                return await _bookingService.CreateMultipleBookingAsync(allBookings);
             });
 
         }
 
         if (bookingId != null || bookingIds.Count > 1)
         {
-            AnsiConsole.MarkupLine($"[green]Booking{(bookingIds.Count > 1 ? "s" : "")} created successfully with ID{(bookingIds.Count > 1 ? "s" : "")}: {(bookingIds.Count > 1 ? bookingIds.ToString() : bookingId.Value)}[/]");
+            AnsiConsole.MarkupLine("[green]Booking created successfully[/]");
             AnsiConsole.MarkupLine("[yellow]Note: Your reservation will expire in 30 minutes if not paid.[/]");
 
             for (int i = 0; i < numberOfBookings; i++)
