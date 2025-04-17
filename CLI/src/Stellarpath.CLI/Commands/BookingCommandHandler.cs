@@ -276,18 +276,17 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
 
         }
 
-
-        if (bookingId.HasValue || bookingIds.Count > 1)
+        if (bookingId != null || bookingIds.Count > 1)
         {
-            AnsiConsole.MarkupLine($"[green]Booking{(bookingId.HasValue ? "" : "s")} created successfully with ID{(bookingId.HasValue ? "" : "s")}: {(bookingId.HasValue ? bookingId.Value : bookingIds.ToString())}[/]");
+            AnsiConsole.MarkupLine($"[green]Booking{(bookingIds.Count > 1 ? "s" : "")} created successfully with ID{(bookingIds.Count > 1 ? "s" : "")}: {(bookingIds.Count > 1 ? bookingIds.ToString() : bookingId.Value)}[/]");
             AnsiConsole.MarkupLine("[yellow]Note: Your reservation will expire in 30 minutes if not paid.[/]");
 
             for (int i = 0; i < numberOfBookings; i++)
             {
                 var booking = await ExecuteWithSpinnerAsync("Fetching booking details...", async ctx =>
                 {
-                    int id = bookingId.HasValue ? bookingId.Value : bookingIds[i];
-                    return await _bookingService.GetByIdAsync(id);
+                    int id = bookingIds.Count > 1 ? bookingIds[i] : bookingId.Value;
+                return await _bookingService.GetByIdAsync(id);
                 });
 
 
