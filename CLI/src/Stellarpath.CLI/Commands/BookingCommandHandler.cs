@@ -355,7 +355,9 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             "Cruise ID",
             "Booking Status",
             "Date Range",
-            "Seat Number"
+            "Seat Number",
+            "Get All",
+            "Go Back"
         };
 
         var selectedCriteria = AnsiConsole.Prompt(
@@ -364,6 +366,11 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
                 .PageSize(10)
                 .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
                 .AddChoices(criteriaOptions));
+
+        if (selectedCriteria.Contains("Go Back"))
+        {
+            return;
+        }
 
         if (selectedCriteria.Contains("User (Google ID)"))
         {
