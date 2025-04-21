@@ -78,49 +78,55 @@ public class CommandProcessor
             return false;
 
         string command = input.Trim().ToLower();
-        switch (command)
+        try { 
+            switch (command)
+            {
+                case CommandMenuStructure.CMD_HELP:
+                    HelpRenderer.ShowHelp();
+                    break;
+                case CommandMenuStructure.CMD_WHOAMI:
+                    UiHelper.ShowUserInfo(_context.CurrentUser);
+                    break;
+                case CommandMenuStructure.CMD_LOGOUT:
+                    _authService.Logout();
+                    break;
+                case CommandMenuStructure.CMD_GALAXIES:
+                    await _galaxyCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_STARSYSTEMS:
+                    await _starSystemCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_DESTINATIONS:
+                    await _destinationCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_SHIPMODELS:
+                    await _shipModelCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_BOOKINGS:
+                    await _bookingCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_SPACESHIPS:
+                    await _spaceshipCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_CRUISES:
+                    await _cruiseCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_USERS:
+                    await _userCommandHandler.HandleAsync();
+                    break;
+                case CommandMenuStructure.CMD_CLEAR:
+                    Console.Clear();
+                    break;
+                case CommandMenuStructure.CMD_EXIT:
+                    return true;
+                default:
+                    AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}.[/]");
+                    break;
+            }
+        }
+        catch (EscapableInputHelper.InputCancelledException)
         {
-            case CommandMenuStructure.CMD_HELP:
-                HelpRenderer.ShowHelp();
-                break;
-            case CommandMenuStructure.CMD_WHOAMI:
-                UiHelper.ShowUserInfo(_context.CurrentUser);
-                break;
-            case CommandMenuStructure.CMD_LOGOUT:
-                _authService.Logout();
-                break;
-            case CommandMenuStructure.CMD_GALAXIES:
-                await _galaxyCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_STARSYSTEMS:
-                await _starSystemCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_DESTINATIONS:
-                await _destinationCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_SHIPMODELS:
-                await _shipModelCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_BOOKINGS:
-                await _bookingCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_SPACESHIPS:
-                await _spaceshipCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_CRUISES:
-                await _cruiseCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_USERS:
-                await _userCommandHandler.HandleAsync();
-                break;
-            case CommandMenuStructure.CMD_CLEAR:
-                Console.Clear();
-                break;
-            case CommandMenuStructure.CMD_EXIT:
-                return true;
-            default:
-                AnsiConsole.MarkupLine($"[yellow]Unknown command: {command}.[/]");
-                break;
+            return false;
         }
         return false;
     }

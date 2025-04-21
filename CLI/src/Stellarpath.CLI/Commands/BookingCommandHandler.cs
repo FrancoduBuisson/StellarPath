@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using System.Management;
+using Spectre.Console;
 using Stellarpath.CLI.Core;
 using Stellarpath.CLI.Models;
 using Stellarpath.CLI.Services;
@@ -175,22 +176,6 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             return;
         }
 
-        var rows = cruises.Select(c => new[]
-        {
-            c.CruiseId.ToString(),
-            $"{c.DepartureDestinationName} -> {c.ArrivalDestinationName}",
-            DisplayHelper.FormatDateTime(c.LocalDepartureTime),
-            FormatDuration(c.DurationMinutes),
-            $"{c.SpaceshipName ?? "Unknown"} (Capacity: {c.Capacity})",
-            DisplayHelper.FormatPrice(c.CruiseSeatPrice),
-            c.CruiseStatusName ?? "Unknown"
-        });
-
-        DisplayHelper.DisplayTable(
-            "Available Cruises",
-            new[] { "ID", "Route", "Departure Time", "Duration", "Spaceship", "Price", "Status" },
-            rows);
-
         var selectedCruise = SelectionHelper.SelectFromListById(
             cruises,
             c => c.CruiseId,
@@ -226,31 +211,51 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
 
         var seatOptions = availableSeatsArray.Select(s => $"Seat {s}").ToList();
 
-        var numberOfBookings = InputHelper.AskForLong("How many bookings do you want to make?", 1, 1, availableSeatsArray.Length);
+        var numberOfBookings = InputHelper.AskForInt("How many bookings do you want to make?", 1, 1, availableSeatsArray.Length);
+        List<string> backList = new List<string>() { "Go back" };
+
+        if (numberOfBookings > 1)
+        {
+            backList.AddRange(seatOptions);
+        }
 
         List<CreateBookingDto> allBookings = new List<CreateBookingDto>();
 
-        for (int i = 0; i < numberOfBookings; i++)
+        int currentSeat = 1;
+
+        while (currentSeat <= numberOfBookings) 
         {
 
             var selectedSeatOption = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"Select seat number {i + 1}")
+                .Title($"Select seat number {currentSeat}")
                 .PageSize(10)
                 .HighlightStyle(new Style(Color.Green))
-                .AddChoices(seatOptions));
+                .AddChoices(currentSeat > 1 ? backList : seatOptions));
 
-            seatOptions.Remove(selectedSeatOption);
-
-            int seatNumber = int.Parse(selectedSeatOption.Replace("Seat ", ""));
-
-            var createBookingDto = new CreateBookingDto
+            if (selectedSeatOption.Equals("Go back"))
             {
-                CruiseId = selectedCruise.CruiseId,
-                SeatNumber = seatNumber
-            };
+                currentSeat--;
+                seatOptions.Insert(0, $"Seat {allBookings.Last().SeatNumber}");
+                backList.Insert(1, $"Seat {allBookings.Last().SeatNumber}");
+                allBookings.RemoveAt(allBookings.Count-1);
+            }
+            else
+            {
+                currentSeat++;
+                seatOptions.Remove(selectedSeatOption);
+                backList.Remove(selectedSeatOption);
 
-            allBookings.Add(createBookingDto);
+                int seatNumber = int.Parse(selectedSeatOption.Replace("Seat ", ""));
+
+                var createBookingDto = new CreateBookingDto
+                {
+                    CruiseId = selectedCruise.CruiseId,
+                    SeatNumber = seatNumber
+                };
+
+                allBookings.Add(createBookingDto);
+            }
         }
 
         int? bookingId = null;
@@ -355,7 +360,9 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
             "Cruise ID",
             "Booking Status",
             "Date Range",
-            "Seat Number"
+            "Seat Number",
+            "Get All",
+            "Go Back"
         };
 
         var selectedCriteria = AnsiConsole.Prompt(
@@ -364,6 +371,11 @@ public class BookingCommandHandler : CommandHandlerBase<Booking>
                 .PageSize(10)
                 .InstructionsText("[grey](Press [blue]<space>[/] to select, [green]<enter>[/] to confirm)[/]")
                 .AddChoices(criteriaOptions));
+
+        if (selectedCriteria.Contains("Go Back"))
+        {
+            return;
+        }
 
         if (selectedCriteria.Contains("User (Google ID)"))
         {
