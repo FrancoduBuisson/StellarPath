@@ -29,7 +29,7 @@ public class BookingService(
                 throw new ArgumentException($"Cruise with ID {bookingDto.CruiseId} not found");
             }
 
-            if (cruise.CruiseStatusName != "Scheduled" && cruise.CruiseStatusName != "In Progress")
+            if (cruise.CruiseStatusName != "Scheduled")
             {
                 throw new InvalidOperationException($"Cannot book a cruise with status {cruise.CruiseStatusName}");
             }
